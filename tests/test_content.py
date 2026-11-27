@@ -17,7 +17,24 @@ from astrodaily.horoscope import NatalContext, build_day_report, natal_from_char
 from astrodaily.models import ContentSnippet
 from astrodaily.tools.import_content import main as import_main, read_folder, upsert
 
-SAMPLES = Path(__file__).resolve().parent.parent / "content-samples"
+
+def synthetic(status="draft", langs=("en", "hi")):
+    """One generated line per content key and language, using every slot the key allows. The real wording
+    lives in the private content repo; these tests only need lines that exercise the machinery."""
+    out = []
+    for i, key in enumerate(REQUIRED_KEYS, start=1):
+        slots = " ".join("{%s}" % n for n in sorted(SLOTS[key]))
+        out.append(SnippetData(key, "en", "line", 1, f"Test line {i} for {slots} today".replace("  ", " ").strip(), status))
+        out.append(SnippetData(key, "hi", "line", 1, f"परीक्षण पंक्ति संख्या {i} है {slots}".replace("  ", " ").strip(), status))
+    return [s for s in out if s.lang in langs]
+
+
+def write_synthetic(folder: Path, **kw):
+    folder.mkdir(exist_ok=True)
+    rows = [dict(signal=s.signal, lang=s.lang, variant=s.variant, text=s.text, status=s.status)
+            for s in synthetic(**kw)]
+    (folder / "gen.json").write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+    return folder
 
 
 def snip(**over):
@@ -64,11 +81,10 @@ def test_set_lint_catches_duplicates():
     assert any("same text" in e for e in errs)
 
 
-def test_sample_library_is_clean_and_complete():
-    snippets = read_folder(SAMPLES)
+def test_generated_set_is_clean_and_complete():
+    snippets = synthetic()
     assert lint_set(snippets) == []
     assert coverage_gaps(snippets) == []
-    assert {s.status for s in snippets} == {"draft"}  # nothing is reviewed until a person says so
 
 
 def test_coverage_reports_gaps():
@@ -111,8 +127,8 @@ def test_every_engine_signal_has_a_content_key(real_signals):
     assert not unknown, f"engine emits signals the content library does not know: {unknown}"
 
 
-def test_sample_library_fills_every_real_signal_in_both_languages(real_signals):
-    snippets = read_folder(SAMPLES)
+def test_library_fills_every_real_signal_in_both_languages(real_signals):
+    snippets = synthetic()
     c = cat.Catalog([(s.signal, s.lang, s.variant, s.text, s.status, "t") for s in snippets])
     for sig in real_signals:
         params = sig.params
@@ -204,8 +220,8 @@ def test_import_main_refuses_when_lint_fails(tmp_path, capsys):
     assert import_main([str(tmp_path), "--check"]) == 1
 
 
-def test_check_mode_passes_on_the_samples(capsys):
-    assert import_main([str(SAMPLES), "--check"]) == 0
+def test_check_mode_passes_on_a_complete_set(tmp_path, capsys):
+    assert import_main([str(write_synthetic(tmp_path / "ok")), "--check"]) == 0
     assert "0 lint problems, 0 coverage gaps" in capsys.readouterr().out
 
 
@@ -213,7 +229,7 @@ def test_check_mode_passes_on_the_samples(capsys):
 
 def _load(client, status="reviewed", only=None):
     with client.session_factory() as db:
-        for s in read_folder(SAMPLES):
+        for s in synthetic():
             if only and s.signal not in only:
                 continue
             db.add(ContentSnippet(signal_key=s.signal, lang=s.lang, kind=s.kind, variant=s.variant,
@@ -261,7 +277,7 @@ def test_api_hides_drafts_unless_allowed(client, monkeypatch):
 def test_api_partial_hindi_falls_back_to_english_per_line(client):
     # Only English exists for some keys: the card must say it is not fully translated.
     with client.session_factory() as db:
-        for s in read_folder(SAMPLES):
+        for s in synthetic():
             if s.lang == "en":
                 db.add(ContentSnippet(signal_key=s.signal, lang="en", kind="line", variant=s.variant,
                                       text=s.text, status="reviewed", version="t"))
