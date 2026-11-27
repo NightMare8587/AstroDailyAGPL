@@ -46,9 +46,9 @@ Postgres (users, birth data, charts, cached results)      Redis (panchang cache,
 | Ephemeris | Swiss Ephemeris via `pyswisseph`, AGPL option. **Decided** | Moshier mode needs no data files; add `.se1` files for full precision. |
 | Hosting | Railway. **Decided** | One API service, Postgres, optional Redis, a cron service. |
 | Database | Postgres. **Decided** | Users, birth details, stored charts, cached daily output. Relational data with JSONB for chart blobs. |
-| Cache | Redis, or Postgres at first. **Open** | Start simple; add Redis when load needs it. |
+| Cache | Postgres only at first. **Decided** | Cached panchang and daily output live in Postgres tables keyed by date and location cell. Add Redis later if load needs it. |
 | Mobile | Flutter. **Decided** | Widgets and notifications are the retention driver. |
-| LLM | Gemini. **Decided** (model **Open**) | Gemini 2.5 Flash is deprecated. Candidates: 3.5 Flash-Lite (cheap default), 3.6/3.8 Flash (better quality). See base-information section 6. |
+| LLM | Gemini, default `gemini-3.5-flash-lite`. **Decided** | Model name is backend configuration (env var `GEMINI_MODEL`), never hard-coded, so it can be switched without a release. Alternatives in base-information section 6. |
 | Auth | Google Sign-In for now. **Decided** | Phone OTP can be added later (needs an SMS provider and cost check). |
 | Push | **Open** | FCM for Android; APNs for iOS. |
 
@@ -122,8 +122,8 @@ businesses. This is a summary, not legal advice.
 
 ## 10. Open questions
 
-1. Which Gemini model for chat, and the monthly budget (see base-information section 6).
-2. Redis from day one or Postgres-only caching at first.
-3. Legal opinion on the AGPL server and private app boundary before launch (the Professional
+1. Monthly LLM budget and the free-tier daily message limit.
+2. Legal opinion on the AGPL server and private app boundary before launch (the Professional
    contract treats an app that requests calculations from a server as containing Swiss Ephemeris).
-4. Privacy: birth details are personal data; decide retention, deletion and consent text.
+3. Privacy: retention, deletion and consent for birth data (what we keep, for how long, how a
+   user deletes it, and the consent text shown at sign-up).
