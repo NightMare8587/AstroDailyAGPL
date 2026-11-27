@@ -7,7 +7,8 @@ computed chart data. There is no human astrologer in the loop.
 
 **Status:** early backend. Working: `GET /v1/panchang` (tithi, nakshatra, yoga, karana, rahu kaal,
 gulika, yamaganda, abhijit, choghadiya; English and Hindi), Google sign-in, sessions, and accounts
-on Postgres. Not built yet: place search, kundli, dashas, daily horoscope, AI chat. See [docs/architecture.md](docs/architecture.md) and
+on Postgres, and birth-place search over GeoNames (India). Not built yet: kundli, dashas, daily
+horoscope, AI chat. See [docs/architecture.md](docs/architecture.md) and
 [docs/base-information.md](docs/base-information.md).
 
 ## Plan in one paragraph
@@ -57,6 +58,27 @@ a SHA-256 hash). Replaying a used refresh token revokes all of that user's sessi
 You must create the Google OAuth client IDs yourself (Google Cloud console) and set
 `GOOGLE_CLIENT_IDS` and `JWT_SECRET` on Railway. Google's signing certificates are fetched on each
 login; caching them is a later optimisation.
+
+## Places
+
+`GET /v1/places/search?q=<start of name>&limit=10` returns matching places, biggest first, each with
+name, Hindi name (when GeoNames has one), state, district, latitude, longitude and IANA timezone.
+It matches English, alternate and Hindi names (`bangalore` finds Bengaluru), needs 2+ letters, and
+ignores accents and case. `GET /v1/places/{id}` returns one place.
+`GET /v1/panchang?date=...&place_id=<id>` uses the place's coordinates and timezone, as an
+alternative to `lat` and `lon`.
+
+Load the data (GeoNames, CC BY 4.0, about 558k populated places in India, 150 MB, about 20 seconds):
+
+```
+DATABASE_URL=... .venv/bin/python -m astrodaily.tools.import_geonames --country IN
+```
+
+It is safe to re-run; it replaces that country's rows. GeoNames gives population for only about 7,400
+Indian places, so villages sort alphabetically after the towns; always show state and district.
+Hindi names exist for only about 1,400 places. Birth times before 1947 need care: the IANA
+`Asia/Kolkata` zone knows local mean time and wartime offsets, but the app should let the user
+confirm the offset.
 
 ## Rate limiting
 

@@ -46,3 +46,17 @@ def get_db() -> Iterator[Session]:
         yield db
     finally:
         db.close()
+
+
+def get_optional_db() -> Iterator[Session | None]:
+    """Like get_db, but yields None when no database is configured (for endpoints where it is optional)."""
+    try:
+        factory = _session_factory()
+    except RuntimeError:
+        yield None
+        return
+    db = factory()
+    try:
+        yield db
+    finally:
+        db.close()

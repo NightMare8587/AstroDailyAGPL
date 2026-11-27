@@ -5,10 +5,14 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import swisseph as swe
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from .. import __version__
+from .places_routes import PlaceOut
 from ..calc.panchang import Element, Span, compute_panchang
 from ..config import get_settings
+from ..db import get_optional_db
+from ..models import Place
 from ..ratelimit import limit
 
 router = APIRouter()
@@ -52,6 +56,7 @@ class PanchangOut(BaseModel):
     yamaganda: SpanOut
     abhijit: SpanOut
     choghadiya: list[SpanOut]
+    place: PlaceOut | None = None
     ayanamsa_lahiri: float
     ayanamsa_note: str = "Lahiri (Chitrapaksha) sidereal; Swiss Ephemeris Moshier unless ephemeris files configured"
 
@@ -75,12 +80,28 @@ def health() -> dict:
             dependencies=[Depends(limit("panchang", "rate_limit_panchang_per_minute"))])
 def panchang(
     date: date_type = Query(..., description="Local calendar date, YYYY-MM-DD"),
-    lat: float = Query(..., ge=-66.0, le=66.0, description="Latitude, degrees north"),
-    lon: float = Query(..., ge=-180.0, le=180.0, description="Longitude, degrees east"),
-    tz: str = Query("Asia/Kolkata", description="IANA timezone name"),
+    place_id: int | None = Query(None, description="GeoNames place id from /v1/places/search. Use this or lat+lon."),
+    lat: float | None = Query(None, ge=-66.0, le=66.0, description="Latitude, degrees north"),
+    lon: float | None = Query(None, ge=-180.0, le=180.0, description="Longitude, degrees east"),
+    tz: str | None = Query(None, description="IANA timezone name (default Asia/Kolkata, or the place's own)"),
+    db: Session | None = Depends(get_optional_db),
 ) -> PanchangOut:
     if not MIN_DATE <= date <= MAX_DATE:
         raise HTTPException(status_code=422, detail=f"date must be between {MIN_DATE} and {MAX_DATE}")
+    place = None
+    if place_id is not None:
+        if lat is not None or lon is not None:
+            raise HTTPException(status_code=422, detail="Give either place_id or lat and lon, not both")
+        if db is None:
+            raise HTTPException(status_code=503, detail="Database is not configured")
+        place = db.get(Place, place_id)
+        if place is None:
+            raise HTTPException(status_code=404, detail="Place not found")
+        lat, lon = place.latitude, place.longitude
+        tz = tz or place.timezone
+    elif lat is None or lon is None:
+        raise HTTPException(status_code=422, detail="Give place_id, or both lat and lon")
+    tz = tz or "Asia/Kolkata"
     try:
         ZoneInfo(tz)
     except (ZoneInfoNotFoundError, ValueError):
@@ -97,5 +118,6 @@ def panchang(
         rahu_kaal=_span(p["rahu_kaal"]), gulika_kaal=_span(p["gulika_kaal"]),
         yamaganda=_span(p["yamaganda"]), abhijit=_span(p["abhijit"]),
         choghadiya=[_span(s) for s in p["choghadiya"]], ayanamsa_lahiri=p["ayanamsa"],
+        place=PlaceOut.from_place(place) if place else None,
     )
 

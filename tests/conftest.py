@@ -59,7 +59,7 @@ def engine(request):
         get_settings.cache_clear()
     eng = create_engine(normalize_database_url(url))
     with eng.begin() as conn:
-        conn.execute(text("TRUNCATE users CASCADE"))
+        conn.execute(text("TRUNCATE users, places CASCADE"))
     yield eng
     eng.dispose()
 
@@ -70,7 +70,7 @@ def client(engine):
 
     from astrodaily.api.auth_routes import get_google_verifier
     from astrodaily.auth.google import GoogleIdentity
-    from astrodaily.db import get_db
+    from astrodaily.db import get_db, get_optional_db
     from astrodaily.main import app
 
     factory = sessionmaker(bind=engine, expire_on_commit=False)
@@ -93,6 +93,7 @@ def client(engine):
         return verify
 
     app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_optional_db] = override_db
     app.dependency_overrides[get_google_verifier] = fake_verifier
     with TestClient(app) as c:
         c.session_factory = factory

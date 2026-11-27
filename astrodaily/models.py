@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Uuid
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -45,3 +45,31 @@ class RefreshToken(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     user: Mapped[User] = relationship(back_populates="refresh_tokens")
+
+
+class Place(Base):
+    """A populated place from GeoNames (CC BY 4.0). Coordinates may be stored permanently."""
+    __tablename__ = "places"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)  # GeoNames id
+    name: Mapped[str] = mapped_column(String(200))
+    name_hi: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    state: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    district: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    country_code: Mapped[str] = mapped_column(String(2), index=True)
+    latitude: Mapped[float] = mapped_column(Float)
+    longitude: Mapped[float] = mapped_column(Float)
+    population: Mapped[int] = mapped_column(Integer, default=0)
+    timezone: Mapped[str] = mapped_column(String(64))  # IANA name, e.g. Asia/Kolkata
+
+
+class PlaceName(Base):
+    """Searchable (normalised) names for a place: its name, ASCII name, alternate and Hindi names."""
+    __tablename__ = "place_names"
+    __table_args__ = (
+        Index("ix_place_names_name_norm", "name_norm", postgresql_ops={"name_norm": "text_pattern_ops"}),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    place_id: Mapped[int] = mapped_column(ForeignKey("places.id", ondelete="CASCADE"), index=True)
+    name_norm: Mapped[str] = mapped_column(String(200))
