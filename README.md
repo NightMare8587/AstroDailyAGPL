@@ -5,9 +5,9 @@ horoscope, daily do/don't guidance with muhurat, home-screen widgets and notific
 an AI layer for personalised 1-to-1 guidance built from the user's birth details and
 computed chart data. There is no human astrologer in the loop.
 
-**Status:** backend scaffold. `GET /v1/panchang` works (tithi, nakshatra, yoga, karana, rahu kaal,
-gulika, yamaganda, abhijit, choghadiya; English and Hindi). Kundli, dashas, daily horoscope and AI
-chat are not built yet. See [docs/architecture.md](docs/architecture.md) and
+**Status:** early backend. Working: `GET /v1/panchang` (tithi, nakshatra, yoga, karana, rahu kaal,
+gulika, yamaganda, abhijit, choghadiya; English and Hindi), Google sign-in, sessions, and accounts
+on Postgres. Not built yet: place search, kundli, dashas, daily horoscope, AI chat. See [docs/architecture.md](docs/architecture.md) and
 [docs/base-information.md](docs/base-information.md).
 
 ## Plan in one paragraph
@@ -28,11 +28,35 @@ cp .env.example .env            # optional; defaults work
 .venv/bin/python -m pytest
 ```
 
+Accounts need Postgres: set `DATABASE_URL` and run `.venv/bin/alembic upgrade head`. Tests run on
+in-memory SQLite by default; set `TEST_DATABASE_URL` to a throwaway Postgres database to run them
+(and the Alembic migration) against Postgres too.
+
 Try: `GET /v1/panchang?date=2025-11-05&lat=28.6139&lon=77.209&tz=Asia/Kolkata` and `GET /health`.
 
 Settings come from environment variables (see `.env.example`). The Gemini model is
 `GEMINI_MODEL` (default `gemini-3.5-flash-lite`), so it can be changed on Railway without a
 code release. A `Dockerfile` is included for Railway.
+
+## Auth
+
+The Flutter app signs in with Google (`google_sign_in`) and sends the Google **ID token** to
+`POST /v1/auth/google`. The backend verifies it against `GOOGLE_CLIENT_IDS`, creates or updates
+the user, and returns a 15-minute access token (JWT) plus a rotating refresh token (stored only as
+a SHA-256 hash). Replaying a used refresh token revokes all of that user's sessions.
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /v1/auth/google` | Exchange a Google ID token for session tokens |
+| `POST /v1/auth/refresh` | Rotate the refresh token, get a new access token |
+| `POST /v1/auth/logout` | Revoke a refresh token |
+| `GET /v1/me` | Current user |
+| `PATCH /v1/me` | Set `language` (`en` or `hi`), record `consent_version` |
+| `DELETE /v1/me` | Permanently delete the account and its tokens |
+
+You must create the Google OAuth client IDs yourself (Google Cloud console) and set
+`GOOGLE_CLIENT_IDS` and `JWT_SECRET` on Railway. Google's signing certificates are fetched on each
+login; caching them is a later optimisation.
 
 ## Verification status
 

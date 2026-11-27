@@ -45,11 +45,11 @@ Postgres (users, birth data, charts, cached results)      Redis (panchang cache,
 | Backend language | Python 3, FastAPI. **Decided** | Best Vedic ecosystem; `pyswisseph` ships Linux wheels. |
 | Ephemeris | Swiss Ephemeris via `pyswisseph`, AGPL option. **Decided** | Moshier mode needs no data files; add `.se1` files for full precision. |
 | Hosting | Railway. **Decided** | One API service, Postgres, optional Redis, a cron service. |
-| Database | Postgres. **Decided** | Users, birth details, stored charts, cached daily output. Relational data with JSONB for chart blobs. |
+| Database | Postgres, SQLAlchemy 2 and Alembic migrations. **Decided, built** (users, refresh tokens) | Users, birth details, stored charts, cached daily output. Relational data with JSONB for chart blobs. |
 | Cache | Postgres only at first. **Decided** | Cached panchang and daily output live in Postgres tables keyed by date and location cell. Add Redis later if load needs it. |
 | Mobile | Flutter. **Decided** | Widgets and notifications are the retention driver. |
 | LLM | Gemini, default `gemini-3.5-flash-lite`. **Decided** | Model name is backend configuration (env var `GEMINI_MODEL`), never hard-coded, so it can be switched without a release. Alternatives in base-information section 6. |
-| Auth | Google Sign-In for now. **Decided** | Phone OTP can be added later (needs an SMS provider and cost check). |
+| Auth | Google Sign-In for now. **Decided, built** | App sends Google ID token; backend issues its own access JWT (15 min) and rotating refresh token (60 days, hashed in DB). Phone OTP can be added later. |
 | Push | **Open** | FCM for Android; APNs for iOS. |
 
 ## 4. Calculation engine
