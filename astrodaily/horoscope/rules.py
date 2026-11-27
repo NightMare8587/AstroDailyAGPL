@@ -10,7 +10,7 @@ The weights are the app's own design, and the dasha tone tables and the activity
 (``VARA_SUITS``, the ``suits`` lists) are editorial guidance, not classical rules.
 """
 
-RULESET_VERSION = "0.3-unverified"
+RULESET_VERSION = "0.4-unverified"
 
 # UNVERIFIED: houses from natal Moon where transiting Moon is favourable (Chandra Bala).
 CHANDRA_BALA_GOOD_HOUSES: frozenset[int] = frozenset({1, 3, 6, 7, 10, 11})

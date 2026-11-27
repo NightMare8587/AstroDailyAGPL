@@ -93,3 +93,13 @@ def test_last_daytime_slot_included_in_best_and_avoid():
     assert last_tue.en == "Rog"
     avoid_tue = avoid_windows(p_tue)
     assert any(w.label == "Rog" and w.start == last_tue.start for w in avoid_tue)
+
+
+def test_abhijit_window_not_offered_on_wednesday():
+    from datetime import date
+    from astrodaily.calc.panchang import compute_panchang
+    wed = compute_panchang(date(2025, 3, 19), 28.6139, 77.2090, "Asia/Kolkata")
+    assert wed["sunrise"].weekday() == 2
+    assert all(w.label != "Abhijit Muhurat" for w in best_windows(wed, limit=20))
+    thu = compute_panchang(date(2025, 3, 20), 28.6139, 77.2090, "Asia/Kolkata")
+    assert any(w.label == "Abhijit Muhurat" for w in best_windows(thu, limit=20))

@@ -16,7 +16,7 @@ BEST_RANK: dict[str, int] = {
 AVOID_CHOGHADIYA: frozenset[str] = frozenset({"Kaal", "Rog", "Udveg"})
 
 _BEST_REASONS: dict[str, str] = {
-    "Amrit": "Amrit choghadiya is traditionally favoured for important and focused tasks.",
+    "Amrit": "In the common choghadiya convention (mainly western India), Amrit favours important, focused tasks.",
     "Abhijit Muhurat": "Abhijit Muhurat around solar noon supports decisive, constructive work.",
     "Shubh": "Shubh choghadiya favours steady progress, planning, and collaboration.",
     "Labh": "Labh choghadiya is well suited for practical gains, trade, and follow-through.",
@@ -87,7 +87,9 @@ def best_windows(panchang: dict[str, Any], limit: int = 2) -> list[Window]:
     ]
 
     candidates = [slot for slot in _daytime_choghadiya(panchang) if slot.en in BEST_RANK]
-    candidates.append(panchang["abhijit"])
+    # Common convention (no classical citation found, UNVERIFIED): Abhijit is not used on Wednesday.
+    if panchang["sunrise"].weekday() != 2:
+        candidates.append(panchang["abhijit"])
 
     ranked: list[tuple[tuple[int, datetime, datetime, str], Window]] = []
     for slot in candidates:

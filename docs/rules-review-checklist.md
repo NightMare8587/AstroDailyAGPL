@@ -61,3 +61,10 @@ the nakshatra and tithi categories weigh most. Rules with `info` kind do not cha
   (affects the content library, not the scoring).
 - Rahu and Ketu transit scoring is the least certain scored rule. If the reviewer cannot confirm it, lower
   its weights or drop it before launch.
+
+## Changes applied (ruleset 0.4, 2026-11-27, from an unverified self-review, not a Jyotishi)
+
+- Abhijit Muhurat is no longer offered as a best window on Wednesdays (the panchang endpoint still reports it).
+- Rahu and Ketu gochara weights are halved, and are kept lighter than Jupiter and Saturn, until a reviewer confirms them.
+- Gochara card reasons now say "simplified, no vedha". Amrit choghadiya wording names the convention as mainly western Indian.
+- Product wording must not say "classical" or "ancient".

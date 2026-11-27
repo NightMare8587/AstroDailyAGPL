@@ -139,9 +139,9 @@ def _gochara_signals(day: DayContext, natal: NatalContext) -> list[Signal]:
         suffix = "good" if good else "poor"
         sig_id = f"gochara_{planet.lower()}_{suffix}"
         if good:
-            reason = f"{planet} transiting house {house} from natal Moon supports steady headway."
+            reason = f"{planet} transiting house {house} from natal Moon supports steady headway (simplified, no vedha)."
         else:
-            reason = f"{planet} transiting house {house} from natal Moon calls for patience and clear planning."
+            reason = f"{planet} transiting house {house} from natal Moon calls for patience and clear planning (simplified, no vedha)."
         out.append(Signal(
             id=sig_id,
             params={"planet": planet, "house": house, "sign": transit.sign, "retrograde": transit.retrograde},

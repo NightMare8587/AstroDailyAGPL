@@ -18,7 +18,7 @@ from . import rules
 
 AREAS: list[str] = ["career", "money", "relationships", "health", "mind"]
 
-SCORING_VERSION = "0.3"
+SCORING_VERSION = "0.4"
 
 # Sum of weights per area is clipped to AREA_CLIP before mapping to 1..5 via AREA_THRESHOLDS.
 AREA_CLIP: tuple[float, float] = (-4.0, 4.0)
@@ -123,8 +123,9 @@ _GOCHARA_GOOD_RAW: dict[str, dict[str, float]] = {
     # Slow planets
     "Jupiter": {"career": 0.55, "money": 0.60, "relationships": 0.40, "health": 0.30, "mind": 0.45},
     "Saturn": {"career": 1.15, "money": 0.90, "relationships": 0.45, "health": 0.70, "mind": 0.75},
-    "Rahu": {"career": 0.75, "money": 0.65, "relationships": 0.35, "health": 0.45, "mind": 0.60},
-    "Ketu": {"career": 0.80, "money": 0.65, "relationships": 0.50, "health": 0.70, "mind": 1.10},
+    # Rahu and Ketu are not in the classical gochara tables; halved until a reviewer confirms them.
+    "Rahu": {"career": 0.38, "money": 0.33, "relationships": 0.18, "health": 0.23, "mind": 0.30},
+    "Ketu": {"career": 0.40, "money": 0.33, "relationships": 0.25, "health": 0.35, "mind": 0.55},
 }
 
 WEIGHTS: dict[str, dict[str, float]] = {

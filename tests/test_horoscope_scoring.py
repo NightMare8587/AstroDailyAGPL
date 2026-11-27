@@ -17,11 +17,14 @@ def test_weight_table_bounds_and_slow_planet_dominance():
             assert -2.0 <= val <= 2.0, f"{sig_id}.{area}={val}"
 
     fast = ("sun", "mars", "mercury", "venus")
-    slow = ("jupiter", "saturn", "rahu", "ketu")
+    slow = ("jupiter", "saturn")  # Rahu/Ketu are deliberately lighter (unverified rule)
     for polarity in ("good", "poor"):
         max_fast = max(sum(abs(v) for v in weights.WEIGHTS[f"gochara_{p}_{polarity}"].values()) for p in fast)
         min_slow = min(sum(abs(v) for v in weights.WEIGHTS[f"gochara_{p}_{polarity}"].values()) for p in slow)
         assert min_slow > max_fast, f"Expected slow > fast for {polarity}"
+        for node in ("rahu", "ketu"):
+            node_total = sum(abs(v) for v in weights.WEIGHTS[f"gochara_{node}_{polarity}"].values())
+            assert node_total < min_slow, f"{node} must stay lighter than Jupiter/Saturn ({polarity})"
 
 
 def test_neutral_input_gives_3_everywhere():
