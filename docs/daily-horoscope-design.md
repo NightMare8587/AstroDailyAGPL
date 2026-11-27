@@ -291,8 +291,8 @@ and cards now carry per-line `text` and `text_lang` next to the engine's `reason
 - **Content keys** are the signal ids, with one key `dasha` for all dasha periods. A test sweeps ~15 months of
   real Level A and B days and fails if the engine emits a signal the library has no key for, or a slot it cannot fill.
 - **Variants** rotate deterministically with the subject and date (same card, same words; other days differ).
-- **Real wording** lives in the private repo `AstroDailyContent` (63 keys, 1 variant each, English and Hindi, all
-  `draft`). Hindi is model-drafted and must be read by a native speaker. This repo's tests use generated lines.
+- **Real wording** lives in the private repo `AstroDailyContent` (63 keys, 3 variants each, English and Hindi,
+  378 lines, all `draft`). Hindi is model-drafted and must be read by a native speaker. This repo's tests use generated lines.
   (A first draft sample was briefly committed here in 36162f1 and removed afterwards; it stays in git history.)
-- **Still to do:** 3 to 4 variants per key, area notes, reviewer sign-off (then flip rows to `reviewed`),
+- **Still to do:** a fourth variant if repetition shows, area notes, reviewer sign-off (then flip rows to `reviewed`),
   and Gemini drafting of the extra variants.
