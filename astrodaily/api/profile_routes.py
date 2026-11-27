@@ -172,11 +172,25 @@ class FeedbackExport(BaseModel):
     created_at: datetime
 
 
+class DeviceExport(BaseModel):
+    platform: str
+    created_at: datetime
+    last_seen_at: datetime
+    active: bool
+
+
+class NotificationExport(BaseModel):
+    daily_enabled: bool
+    daily_time: str
+    devices: list[DeviceExport]
+
+
 class ExportOut(BaseModel):
     account: UserOut
     consented_at: datetime | None
     profiles: list[ProfileOut]
     horoscope_feedback: list[FeedbackExport] = []
+    notifications: NotificationExport | None = None
 
 
 @export_router.get("/export", response_model=ExportOut)
@@ -186,4 +200,17 @@ def export_my_data(user: User = Depends(get_current_user)) -> ExportOut:
                      profiles=[ProfileOut.from_profile(p) for p in user.profiles],
                      horoscope_feedback=[FeedbackExport(subject=f.subject, date=f.local_date, rating=f.rating,
                                                         felt_accurate=f.felt_accurate, created_at=f.created_at)
-                                         for f in user.feedback])
+                                         for f in user.feedback],
+                     notifications=_notifications_export(user))
+
+
+def _notifications_export(user: User) -> NotificationExport | None:
+    p = user.notification_prefs
+    if p is None and not user.devices:
+        return None
+    # Push tokens are credentials for a phone, so the export lists devices without the token itself.
+    return NotificationExport(
+        daily_enabled=bool(p and p.daily_enabled),
+        daily_time=p.daily_time.strftime("%H:%M") if p else "07:30",
+        devices=[DeviceExport(platform=d.platform, created_at=d.created_at, last_seen_at=d.last_seen_at,
+                              active=d.disabled_at is None) for d in user.devices])

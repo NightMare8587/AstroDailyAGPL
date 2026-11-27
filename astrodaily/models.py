@@ -44,6 +44,12 @@ class User(Base):
     feedback: Mapped[list["HoroscopeFeedback"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", order_by="HoroscopeFeedback.created_at"
     )
+    devices: Mapped[list["DeviceToken"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", order_by="DeviceToken.created_at"
+    )
+    notification_prefs: Mapped["NotificationPrefs | None"] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
 
 
 class RefreshToken(Base):
@@ -158,5 +164,48 @@ class ContentSnippet(Base):
     text: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(12), default="draft")
     version: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class DeviceToken(Base):
+    """A phone or browser that can receive push messages (an FCM registration token). Personal data:
+    removed with the account, and disabled when the push service says the token is dead."""
+    __tablename__ = "device_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token: Mapped[str] = mapped_column(String(4096), unique=True)
+    platform: Mapped[str] = mapped_column(String(8))  # android, ios or web
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship(back_populates="devices")
+
+
+class NotificationPrefs(Base):
+    """What a user wants to be sent. Off until they opt in."""
+    __tablename__ = "notification_prefs"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    daily_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    daily_time: Mapped[time] = mapped_column(Time, default=time(7, 30))  # local time at the user's city
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="notification_prefs")
+
+
+class NotificationLog(Base):
+    """One row per user, kind and local date, so a message is never sent twice. Holds no message text."""
+    __tablename__ = "notification_log"
+    __table_args__ = (UniqueConstraint("user_id", "kind", "local_date", name="uq_notification_once"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(16))  # "daily"
+    local_date: Mapped[date] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(12))  # sending, sent, failed, no_device
+    attempts: Mapped[int] = mapped_column(SmallInteger, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)

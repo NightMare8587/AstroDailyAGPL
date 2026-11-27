@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     # Content library: show draft (unreviewed) wording. Keep false in production until a reviewer approves.
     content_allow_draft: bool = False
 
+    # Push notifications (Firebase Cloud Messaging). The service-account JSON, as one string. Without it the
+    # dispatcher only logs what it would send.
+    fcm_service_account_json: str | None = None
+    # Longest a daily message may be late (cron down, restarts) before the day is skipped, in minutes.
+    notify_max_late_minutes: int = 180
+
     # Most birth profiles one account may keep (the user's own plus family).
     max_profiles_per_user: int = 5
 
