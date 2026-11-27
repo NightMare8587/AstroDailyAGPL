@@ -16,7 +16,7 @@ from ..config import get_settings
 from ..db import get_db
 from ..models import BirthProfile, Place, User
 from ..ratelimit import limit
-from .birth import Location, check_date, resolve_location
+from .birth import Location, check_date, place_label as _place_label, resolve_location
 from .kundli_routes import KundliOut, build_kundli
 from .schemas import UserOut
 
@@ -75,12 +75,6 @@ class ProfileOut(BaseModel):
         return cls(id=p.id, label=p.label, birth_date=p.birth_date, birth_time=p.birth_time, place_id=p.place_id,
                    place_name=p.place_name, latitude=p.latitude, longitude=p.longitude, timezone=p.timezone,
                    utc_offset_minutes=p.utc_offset_minutes, created_at=p.created_at, updated_at=p.updated_at)
-
-
-def _place_label(place: Place | None) -> str | None:
-    if place is None:
-        return None
-    return ", ".join(x for x in (place.name, place.district, place.state) if x)
 
 
 def _apply_location(profile: BirthProfile, loc: Location) -> None:
@@ -170,14 +164,26 @@ export_router = APIRouter(prefix="/v1/me", tags=["me"],
                           dependencies=[Depends(limit("me", "rate_limit_default_per_minute"))])
 
 
+class FeedbackExport(BaseModel):
+    subject: str
+    date: date_type
+    rating: int
+    felt_accurate: bool | None
+    created_at: datetime
+
+
 class ExportOut(BaseModel):
     account: UserOut
     consented_at: datetime | None
     profiles: list[ProfileOut]
+    horoscope_feedback: list[FeedbackExport] = []
 
 
 @export_router.get("/export", response_model=ExportOut)
 def export_my_data(user: User = Depends(get_current_user)) -> ExportOut:
     """Everything we hold about the signed-in user, in one response."""
     return ExportOut(account=UserOut.from_user(user), consented_at=user.consented_at,
-                     profiles=[ProfileOut.from_profile(p) for p in user.profiles])
+                     profiles=[ProfileOut.from_profile(p) for p in user.profiles],
+                     horoscope_feedback=[FeedbackExport(subject=f.subject, date=f.local_date, rating=f.rating,
+                                                        felt_accurate=f.felt_accurate, created_at=f.created_at)
+                                         for f in user.feedback])

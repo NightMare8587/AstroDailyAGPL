@@ -1,7 +1,9 @@
 import uuid
 from datetime import date, datetime, time, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Time, Uuid
+from sqlalchemy import (
+    Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, SmallInteger, String, Time, UniqueConstraint, Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -38,6 +40,9 @@ class User(Base):
     )
     profiles: Mapped[list["BirthProfile"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", order_by="BirthProfile.created_at"
+    )
+    feedback: Mapped[list["HoroscopeFeedback"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", order_by="HoroscopeFeedback.created_at"
     )
 
 
@@ -106,3 +111,30 @@ class BirthProfile(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     user: Mapped[User] = relationship(back_populates="profiles")
+    feedback: Mapped[list["HoroscopeFeedback"]] = relationship(
+        back_populates="profile", cascade="all, delete-orphan"
+    )
+
+
+class HoroscopeFeedback(Base):
+    """A thumbs up or down on one day's card. One row per user, card and date (re-rating replaces it).
+    Removed with the account, and with the profile when the card was a profile's."""
+    __tablename__ = "horoscope_feedback"
+    __table_args__ = (UniqueConstraint("user_id", "subject", "local_date", name="uq_feedback_user_subject_date"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    profile_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("birth_profiles.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    subject: Mapped[str] = mapped_column(String(48))  # "rashi:5" or "profile:<uuid>"
+    local_date: Mapped[date] = mapped_column(Date)
+    rating: Mapped[int] = mapped_column(SmallInteger)  # +1 or -1
+    felt_accurate: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    engine_version: Mapped[str] = mapped_column(String(16))
+    ruleset_version: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="feedback")
+    profile: Mapped["BirthProfile | None"] = relationship(back_populates="feedback")

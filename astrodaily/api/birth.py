@@ -27,8 +27,15 @@ def check_date(name: str, value: date_type) -> None:
         raise HTTPException(status_code=422, detail=f"{name} must be between {MIN_DATE} and {MAX_DATE}")
 
 
+def place_label(place: Place | None) -> str | None:
+    """'Name, District, State' for display and for the copy stored in a profile."""
+    if place is None:
+        return None
+    return ", ".join(x for x in (place.name, place.district, place.state) if x)
+
+
 def resolve_location(db: Session | None, place_id: int | None, lat: float | None, lon: float | None,
-                     tz: str | None) -> Location:
+                     tz: str | None, what: str = "the birth place") -> Location:
     """Turn a place_id, or lat and lon, into a validated location. Raises HTTP errors for bad input."""
     place = None
     if place_id is not None:
@@ -41,7 +48,7 @@ def resolve_location(db: Session | None, place_id: int | None, lat: float | None
             raise HTTPException(status_code=404, detail="Place not found")
         lat, lon, tz = place.latitude, place.longitude, tz or place.timezone
     elif lat is None or lon is None:
-        raise HTTPException(status_code=422, detail="Give the birth place: place_id, or both lat and lon")
+        raise HTTPException(status_code=422, detail=f"Give {what}: place_id, or both lat and lon")
     tz = tz or DEFAULT_TZ
     try:
         ZoneInfo(tz)

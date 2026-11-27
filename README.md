@@ -8,7 +8,8 @@ computed chart data. There is no human astrologer in the loop.
 **Status:** early backend. Working: `GET /v1/panchang` (tithi, nakshatra, yoga, karana, rahu kaal,
 gulika, yamaganda, abhijit, choghadiya; English and Hindi), Google sign-in, sessions, and accounts
 on Postgres, birth-place search over GeoNames (India), and the kundli (birth chart and Vimshottari
-dasha), and saved birth profiles. Not built yet: daily horoscope, AI chat. See [docs/architecture.md](docs/architecture.md) and
+dasha), saved birth profiles, and daily horoscope cards (rules only, English wording). Not built yet: the
+content library (proper English and Hindi text), AI chat, notifications. See [docs/architecture.md](docs/architecture.md) and
 [docs/base-information.md](docs/base-information.md).
 
 ## Plan in one paragraph
@@ -85,6 +86,27 @@ family charts work): `POST /v1/profiles`, `GET /v1/profiles`, `GET`, `PATCH` and
 recorded with `PATCH /v1/me {"consent_version": "..."}`; until then profile endpoints answer 403. Profiles
 are private to their owner, deleted with the account, and exportable with `GET /v1/me/export`.
 See [docs/privacy-and-data.md](docs/privacy-and-data.md).
+
+## Daily horoscope
+
+Rule-based cards from the engine in `astrodaily/horoscope/` (design: [docs/daily-horoscope-design.md](docs/daily-horoscope-design.md)).
+A card has a day score, five area scores (career, money, relationships, health and energy, mind and
+learning), up to three suggestions for and against, a background theme, a "coming up" note, best and
+avoid time windows, the panchang of the day, and the list of signals behind it ("why"). Wording is the
+engine's English `reason` text for now; `lang=hi` is accepted and answered honestly (`translated: false`).
+
+| Endpoint | Who | Level |
+|---|---|---|
+| `GET /v1/horoscope/rashi/{1..12}?date=&place_id=&lat=&lon=&lang=` | anyone | A (Moon sign only) |
+| `GET /v1/profiles/{id}/horoscope?date=&place_id=&lat=&lon=&lang=` | signed in, consent, owner | B (natal Moon, nakshatra, lagna, dasha) |
+| `GET /v1/me/horoscope` | signed in, consent | B, the user's first profile |
+| `GET /v1/me/horoscope/widget` | signed in, consent | a few hundred bytes for widgets and notifications |
+| `POST /v1/horoscope/feedback` | signed in | thumbs up or down on a card; re-rating replaces |
+
+Where the sky is read: an explicit place if given, else the signed-in user's home city, else (profile
+cards) the birth place, else New Delhi. Cards are computed in about 6 ms and kept in a small in-process
+cache; nothing is stored except feedback. The classical rule tables behind the signals are still
+**unverified** (see the design doc), so treat the content as a preview.
 
 ## Places
 

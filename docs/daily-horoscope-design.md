@@ -6,6 +6,12 @@ the product owner. Classical rule tables below are written from standard Jyotish
 
 ## Build status (2026-11-27)
 
+**Phase 3 (API) is built too**: the endpoints in section 8.1, minus notifications. One deliberate change: **no
+database cache table**. The engine computes a card in about 6 ms, so a table would add storage, a migration and
+a way for anonymous callers to fill it by varying coordinates, for no real gain. Cards use a bounded in-process
+cache; only feedback is stored (`horoscope_feedback`). Revisit when generated text (slow and costly) exists.
+Wording is still the engine's English reasons until the content library (phase 2) exists.
+
 **Phase 1 (pure engine) is built and committed**: transits and ingresses, the rule families, centred
 scoring, daily-first selection, muhurat windows and a deterministic day report, in `astrodaily/calc/transits.py`
 and `astrodaily/horoscope/`. Written by Antigravity and reviewed by Claude. 123 tests pass. It is **not**

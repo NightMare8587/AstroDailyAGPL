@@ -11,9 +11,10 @@ and not legal advice; a lawyer should review it and the policy text before real 
 | Google account id, email, name, picture URL | `users` | Sign-in |
 | Language, consent version and time, home place | `users` | App behaviour, proof of consent |
 | Refresh tokens (SHA-256 hash only) | `refresh_tokens` | Sessions |
+| Horoscope feedback: card (Moon sign or profile), date, thumbs up or down, optional "felt accurate" | `horoscope_feedback` | Tuning the rules and content. Removed with the account, and with the profile when it was a profile's card. |
 | Birth profiles: label, birth date and time, birth place and its coordinates and timezone | `birth_profiles` | Charts and daily guidance. Up to 5 per user, so family charts are possible. |
 
-Not stored: IP addresses (used in memory for rate limiting only), chat history (the AI chat is not
+Daily cards are computed on request and not stored. Not stored: IP addresses (used in memory for rate limiting only), chat history (the AI chat is not
 built yet), any payment data. `POST /v1/kundli` calculates a chart without saving anything.
 
 ## Rules the code enforces
@@ -24,7 +25,7 @@ built yet), any payment data. `POST /v1/kundli` calculates a chart without savin
   the same as a profile that does not exist. Ids are random UUIDs.
 - **Deletion.** `DELETE /v1/profiles/{id}` removes one profile. `DELETE /v1/me` removes the account,
   its sessions and all its profiles, in one step, with no recovery.
-- **Export.** `GET /v1/me/export` returns everything held about the signed-in user, and works even
+- **Export.** `GET /v1/me/export` returns everything held about the signed-in user (including horoscope feedback), and works even
   before consent.
 - **No birth data in URLs.** Profile charts are read with `GET /v1/profiles/{id}/kundli`; birth
   details travel in request bodies, so they do not appear in access logs.
