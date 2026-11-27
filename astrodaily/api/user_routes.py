@@ -7,9 +7,11 @@ from sqlalchemy.orm import Session
 from ..auth.deps import get_current_user
 from ..db import get_db
 from ..models import User, utcnow
+from ..ratelimit import limit
 from .schemas import UserOut
 
-router = APIRouter(prefix="/v1/me", tags=["me"])
+router = APIRouter(prefix="/v1/me", tags=["me"],
+                   dependencies=[Depends(limit("me", "rate_limit_default_per_minute"))])
 
 
 class UserUpdate(BaseModel):

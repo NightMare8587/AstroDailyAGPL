@@ -10,9 +10,11 @@ from ..auth.tokens import create_access_token, hash_refresh_token, new_refresh_t
 from ..config import get_settings
 from ..db import get_db
 from ..models import RefreshToken, User, utcnow
+from ..ratelimit import limit
 from .schemas import TokenOut, UserOut
 
-router = APIRouter(prefix="/v1/auth", tags=["auth"])
+router = APIRouter(prefix="/v1/auth", tags=["auth"],
+                   dependencies=[Depends(limit("auth", "rate_limit_auth_per_minute"))])
 
 
 class GoogleLoginIn(BaseModel):

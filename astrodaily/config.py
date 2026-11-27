@@ -26,6 +26,19 @@ class Settings(BaseSettings):
     access_token_minutes: int = 15
     refresh_token_days: int = 60
 
+    # Rate limiting, requests per minute per client IP (sliding window, in memory).
+    rate_limit_enabled: bool = True
+    rate_limit_panchang_per_minute: int = 60
+    rate_limit_auth_per_minute: int = 10
+    rate_limit_default_per_minute: int = 120
+    # How many reverse proxies sit in front of the app (Railway = 1). Default: 1 in production, else 0.
+    trusted_proxy_hops: int | None = None
+
+    def proxy_hops(self) -> int:
+        if self.trusted_proxy_hops is not None:
+            return self.trusted_proxy_hops
+        return 1 if self.app_env == "production" else 0
+
     @property
     def google_client_id_list(self) -> list[str]:
         return [c.strip() for c in self.google_client_ids.split(",") if c.strip()]

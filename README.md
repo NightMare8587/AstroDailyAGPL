@@ -58,6 +58,14 @@ You must create the Google OAuth client IDs yourself (Google Cloud console) and 
 `GOOGLE_CLIENT_IDS` and `JWT_SECRET` on Railway. Google's signing certificates are fetched on each
 login; caching them is a later optimisation.
 
+## Rate limiting
+
+Per client IP, sliding one-minute window, in memory: `/v1/panchang` 60, `/v1/auth/*` 10, `/v1/me` 120
+requests a minute (`RATE_LIMIT_*` variables; `/health` is not limited). Over the limit the API
+returns `429` with a `Retry-After` header. Behind Railway's proxy the client IP is the last
+`X-Forwarded-For` entry (`TRUSTED_PROXY_HOPS`, default 1 in production). Counters are per process:
+with more than one replica, move them to Redis. Panchang dates are limited to 1800-2200.
+
 ## Verification status
 
 Checked against published values: Lahiri ayanamsa at J2000, Makar Sankranti 2025, and the

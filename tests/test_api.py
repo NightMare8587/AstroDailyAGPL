@@ -39,3 +39,11 @@ def test_panchang_rejects_bad_input():
     assert client.get("/v1/panchang", params={**base, "tz": "Mars/Base"}).status_code == 422
     assert client.get("/v1/panchang", params={**base, "lat": 95}).status_code == 422
     assert client.get("/v1/panchang", params={"lat": 28.6, "lon": 77.2}).status_code == 422
+
+
+def test_panchang_date_range_is_bounded():
+    base = {"lat": 28.6, "lon": 77.2}
+    assert client.get("/v1/panchang", params={**base, "date": "5000-01-01"}).status_code == 422
+    assert client.get("/v1/panchang", params={**base, "date": "1700-01-01"}).status_code == 422
+    assert client.get("/v1/panchang", params={**base, "date": "1800-01-01"}).status_code == 200
+    assert client.get("/v1/panchang", params={**base, "date": "2200-12-31"}).status_code == 200

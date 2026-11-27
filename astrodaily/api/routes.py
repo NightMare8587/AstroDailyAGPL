@@ -2,14 +2,20 @@ from datetime import date as date_type
 from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, HTTPException, Query
+import swisseph as swe
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from .. import __version__
 from ..calc.panchang import Element, Span, compute_panchang
 from ..config import get_settings
+from ..ratelimit import limit
 
 router = APIRouter()
+
+# The built-in Moshier ephemeris fails far outside this range; real use is well inside it.
+MIN_DATE = date_type(1800, 1, 1)
+MAX_DATE = date_type(2200, 12, 31)
 
 
 class Named(BaseModel):
@@ -65,20 +71,23 @@ def health() -> dict:
     return {"status": "ok", "version": __version__, "gemini_model": settings.gemini_model}
 
 
-@router.get("/v1/panchang", response_model=PanchangOut)
+@router.get("/v1/panchang", response_model=PanchangOut,
+            dependencies=[Depends(limit("panchang", "rate_limit_panchang_per_minute"))])
 def panchang(
     date: date_type = Query(..., description="Local calendar date, YYYY-MM-DD"),
     lat: float = Query(..., ge=-66.0, le=66.0, description="Latitude, degrees north"),
     lon: float = Query(..., ge=-180.0, le=180.0, description="Longitude, degrees east"),
     tz: str = Query("Asia/Kolkata", description="IANA timezone name"),
 ) -> PanchangOut:
+    if not MIN_DATE <= date <= MAX_DATE:
+        raise HTTPException(status_code=422, detail=f"date must be between {MIN_DATE} and {MAX_DATE}")
     try:
         ZoneInfo(tz)
     except (ZoneInfoNotFoundError, ValueError):
         raise HTTPException(status_code=422, detail=f"Unknown timezone: {tz}")
     try:
         p = compute_panchang(date, lat, lon, tz)
-    except ValueError as exc:
+    except (ValueError, swe.Error) as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     return PanchangOut(
         date=p["date"], timezone=p["timezone"], sunrise=p["sunrise"], sunset=p["sunset"],

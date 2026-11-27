@@ -14,6 +14,14 @@ def _configure_ephemeris():
     ephem.configure(None)
 
 
+@pytest.fixture(autouse=True)
+def _fresh_rate_limits():
+    from astrodaily import ratelimit
+    ratelimit.reset()
+    yield
+    ratelimit.reset()
+
+
 def _backends():
     params = ["sqlite"]
     if os.environ.get("TEST_DATABASE_URL"):
