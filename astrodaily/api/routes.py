@@ -3,7 +3,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import swisseph as swe
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from .. import __version__
@@ -98,3 +98,15 @@ def panchang(
         yamaganda=_span(p["yamaganda"]), abhijit=_span(p["abhijit"]),
         choghadiya=[_span(s) for s in p["choghadiya"]], ayanamsa_lahiri=p["ayanamsa"],
     )
+
+
+# TEMPORARY: remove after checking Railway proxy headers.
+@router.get("/_debug/ip")
+def debug_ip(request: Request) -> dict:
+    return {
+        "x_forwarded_for": request.headers.get("x-forwarded-for"),
+        "x_real_ip": request.headers.get("x-real-ip"),
+        "client_host": request.client.host if request.client else None,
+        "x_forwarded_proto": request.headers.get("x-forwarded-proto"),
+        "x_railway_edge": request.headers.get("x-railway-edge"),
+    }
