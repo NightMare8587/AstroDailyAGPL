@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     access_token_minutes: int = 15
     refresh_token_days: int = 60
 
+    # Most birth profiles one account may keep (the user's own plus family).
+    max_profiles_per_user: int = 5
+
     # Rate limiting, requests per minute per client IP (sliding window, in memory).
     rate_limit_enabled: bool = True
     rate_limit_panchang_per_minute: int = 60

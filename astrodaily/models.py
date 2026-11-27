@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Uuid
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Time, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -35,6 +35,9 @@ class User(Base):
 
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    profiles: Mapped[list["BirthProfile"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", order_by="BirthProfile.created_at"
     )
 
 
@@ -79,3 +82,27 @@ class PlaceName(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     place_id: Mapped[int] = mapped_column(ForeignKey("places.id", ondelete="CASCADE"), index=True)
     name_norm: Mapped[str] = mapped_column(String(200))
+
+
+class BirthProfile(Base):
+    """A person's birth details (the user's own, or a family member's). Personal data: it is deleted
+    with the account, and only its owner can read it."""
+    __tablename__ = "birth_profiles"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    label: Mapped[str] = mapped_column(String(40))
+    birth_date: Mapped[date] = mapped_column(Date)
+    birth_time: Mapped[time] = mapped_column(Time)
+    # The place is copied in, so a chart never changes if GeoNames data is later re-imported or the
+    # place disappears. place_id is only a pointer back to the picked place.
+    place_id: Mapped[int | None] = mapped_column(ForeignKey("places.id", ondelete="SET NULL"), nullable=True)
+    place_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    latitude: Mapped[float] = mapped_column(Float)
+    longitude: Mapped[float] = mapped_column(Float)
+    timezone: Mapped[str] = mapped_column(String(64))  # IANA name
+    utc_offset_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)  # overrides timezone
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="profiles")

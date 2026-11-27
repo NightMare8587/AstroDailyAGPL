@@ -2,7 +2,6 @@ from datetime import date as date_type
 from datetime import datetime, timezone
 from datetime import time as time_type
 from typing import Literal
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import swisseph as swe
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,9 +11,8 @@ from sqlalchemy.orm import Session
 from ..calc import dasha, names, zodiac
 from ..calc.kundli import compute_chart, names_pair, resolve_birth_moment
 from ..db import get_optional_db
-from ..models import Place
 from ..ratelimit import limit
-from .routes import MAX_DATE, MIN_DATE
+from .birth import Location, check_date, resolve_location
 from .schemas import PlaceOut
 
 router = APIRouter(prefix="/v1/kundli", tags=["kundli"],
@@ -142,52 +140,28 @@ def _period(p: dict) -> dict:
     return {**p, "lord": _lord(p["lord"])}
 
 
-@router.post("", response_model=KundliOut)
-def kundli(body: KundliIn, db: Session | None = Depends(get_optional_db)) -> KundliOut:
-    """Calculate a birth chart. Nothing is stored."""
-    if not MIN_DATE <= body.date <= MAX_DATE:
-        raise HTTPException(status_code=422, detail=f"date must be between {MIN_DATE} and {MAX_DATE}")
-    if body.as_of is not None and not MIN_DATE <= body.as_of <= MAX_DATE:
-        raise HTTPException(status_code=422, detail=f"as_of must be between {MIN_DATE} and {MAX_DATE}")
-
-    place = None
-    tz = body.tz
-    lat, lon = body.lat, body.lon
-    if body.place_id is not None:
-        if lat is not None or lon is not None:
-            raise HTTPException(status_code=422, detail="Give either place_id or lat and lon, not both")
-        if db is None:
-            raise HTTPException(status_code=503, detail="Database is not configured")
-        place = db.get(Place, body.place_id)
-        if place is None:
-            raise HTTPException(status_code=404, detail="Place not found")
-        lat, lon, tz = place.latitude, place.longitude, tz or place.timezone
-    elif lat is None or lon is None:
-        raise HTTPException(status_code=422, detail="Give the birth place: place_id, or both lat and lon")
+def build_kundli(*, birth_date: date_type, birth_time: time_type, location: Location,
+                 utc_offset_minutes: int | None, node: str, as_of_date: date_type | None) -> KundliOut:
+    """Calculate a chart for already-validated inputs. Shared by the stateless and saved-profile endpoints."""
     try:
-        if body.utc_offset_minutes is None:
-            ZoneInfo(tz or "Asia/Kolkata")
-    except (ZoneInfoNotFoundError, ValueError):
-        raise HTTPException(status_code=422, detail=f"Unknown timezone: {tz}")
-
-    try:
-        birth = resolve_birth_moment(body.date, body.time, tz, body.utc_offset_minutes)
+        birth = resolve_birth_moment(birth_date, birth_time, location.timezone, utc_offset_minutes)
         as_of = None
-        if body.as_of is not None:
-            as_of = datetime.combine(body.as_of, time_type(12, 0), tzinfo=birth.tz).astimezone(timezone.utc)
-        chart = compute_chart(birth, lat, lon, body.node, as_of)
+        if as_of_date is not None:
+            as_of = datetime.combine(as_of_date, time_type(12, 0), tzinfo=birth.tz).astimezone(timezone.utc)
+        chart = compute_chart(birth, location.latitude, location.longitude, node, as_of)
     except (ValueError, OverflowError, swe.Error) as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
+    place = location.place
+    tz_label = location.timezone if utc_offset_minutes is None else f"UTC{birth.utc_offset_minutes:+d}min"
     d = chart["dasha"]
     return KundliOut(
-        birth=BirthOut(local_datetime=birth.local, utc_datetime=birth.utc, timezone=tz or "Asia/Kolkata"
-                       if body.utc_offset_minutes is None else f"UTC{birth.utc_offset_minutes:+d}min",
-                       utc_offset_minutes=birth.utc_offset_minutes, latitude=lat, longitude=lon,
-                       place=PlaceOut.from_place(place) if place else None),
+        birth=BirthOut(local_datetime=birth.local, utc_datetime=birth.utc, timezone=tz_label,
+                       utc_offset_minutes=birth.utc_offset_minutes, latitude=location.latitude,
+                       longitude=location.longitude, place=PlaceOut.from_place(place) if place else None),
         warnings=birth.warnings,
         ayanamsa_lahiri=chart["ayanamsa"],
-        node=body.node,
+        node=node,
         lagna=LagnaOut(
             longitude=chart["lagna"]["longitude"], sign=_sign(chart["lagna"]["sign"]),
             degree_in_sign=chart["lagna"]["degree_in_sign"], nakshatra=_nak(chart["lagna"]["nakshatra"]),
@@ -207,3 +181,14 @@ def kundli(body: KundliIn, db: Session | None = Depends(get_optional_db)) -> Kun
             as_of=d["as_of"],
             current=CurrentDashaOut(**{k: _period(v) for k, v in d["current"].items()}) if d["current"] else None),
     )
+
+
+@router.post("", response_model=KundliOut)
+def kundli(body: KundliIn, db: Session | None = Depends(get_optional_db)) -> KundliOut:
+    """Calculate a birth chart. Nothing is stored."""
+    check_date("date", body.date)
+    if body.as_of is not None:
+        check_date("as_of", body.as_of)
+    location = resolve_location(db, body.place_id, body.lat, body.lon, body.tz)
+    return build_kundli(birth_date=body.date, birth_time=body.time, location=location,
+                        utc_offset_minutes=body.utc_offset_minutes, node=body.node, as_of_date=body.as_of)

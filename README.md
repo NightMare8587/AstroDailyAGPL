@@ -8,7 +8,7 @@ computed chart data. There is no human astrologer in the loop.
 **Status:** early backend. Working: `GET /v1/panchang` (tithi, nakshatra, yoga, karana, rahu kaal,
 gulika, yamaganda, abhijit, choghadiya; English and Hindi), Google sign-in, sessions, and accounts
 on Postgres, birth-place search over GeoNames (India), and the kundli (birth chart and Vimshottari
-dasha). Not built yet: daily horoscope, AI chat. See [docs/architecture.md](docs/architecture.md) and
+dasha), and saved birth profiles. Not built yet: daily horoscope, AI chat. See [docs/architecture.md](docs/architecture.md) and
 [docs/base-information.md](docs/base-information.md).
 
 ## Plan in one paragraph
@@ -76,6 +76,15 @@ wartime +06:30 may apply) and local times skipped or repeated by a clock change.
 
 Not built yet: divisional charts beyond Navamsa, bhava chalit houses, yogas, ashtakavarga, an unknown
 birth time mode, and saving a birth profile on the account.
+
+## Birth profiles
+
+Signed-in users who have recorded consent can save birth profiles (their own and up to 5 in total, so
+family charts work): `POST /v1/profiles`, `GET /v1/profiles`, `GET`, `PATCH` and `DELETE
+/v1/profiles/{id}`, and `GET /v1/profiles/{id}/kundli` for the chart (query `node`, `as_of`). Consent is
+recorded with `PATCH /v1/me {"consent_version": "..."}`; until then profile endpoints answer 403. Profiles
+are private to their owner, deleted with the account, and exportable with `GET /v1/me/export`.
+See [docs/privacy-and-data.md](docs/privacy-and-data.md).
 
 ## Places
 

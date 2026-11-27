@@ -125,5 +125,6 @@ businesses. This is a summary, not legal advice.
 1. Monthly LLM budget and the free-tier daily message limit.
 2. Legal opinion on the AGPL server and private app boundary before launch (the Professional
    contract treats an app that requests calculations from a server as containing Swiss Ephemeris).
-3. Privacy: retention, deletion and consent for birth data (what we keep, for how long, how a
-   user deletes it, and the consent text shown at sign-up).
+3. Privacy: retention period for inactive accounts, the consent text, and the third-party and
+   region questions. Drafted in [privacy-and-data.md](privacy-and-data.md); needs your decision and
+   a lawyer's review before launch.

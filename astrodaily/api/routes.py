@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from .. import __version__
 from ..auth.deps import get_optional_user
 from ..models import User
+from .birth import MAX_DATE, MIN_DATE
 from .schemas import PlaceOut
 from ..calc import ephem
 from ..calc.panchang import Element, Span, compute_panchang
@@ -20,9 +21,6 @@ from ..ratelimit import limit
 
 router = APIRouter()
 
-# The built-in Moshier ephemeris fails far outside this range; real use is well inside it.
-MIN_DATE = date_type(1800, 1, 1)
-MAX_DATE = date_type(2200, 12, 31)
 
 
 class Named(BaseModel):
