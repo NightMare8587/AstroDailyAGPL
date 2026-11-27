@@ -4,6 +4,31 @@ Status: draft v0.1 (2026-11-27). Design only, no code yet. Items marked **Open**
 the product owner. Classical rule tables below are written from standard Jyotish practice and are
 **UNVERIFIED** until checked against the public-domain Sanskrit sources (see section 9).
 
+## Build status (2026-11-27)
+
+**Phase 1 (pure engine) is built and committed**: transits and ingresses, the rule families, centred
+scoring, daily-first selection, muhurat windows and a deterministic day report, in `astrodaily/calc/transits.py`
+and `astrodaily/horoscope/`. Written by Antigravity and reviewed by Claude. 123 tests pass. It is **not**
+reachable from the API yet, and all rule tables are still **unverified** (section 9).
+
+What the first measurement taught us, and what changed from the sections below:
+
+- **Heavy slow-planet weights make a bad card.** Over a year and all 12 Moon signs, the first version scored
+  45% of days a 2, none a 1 or 5, and repeated the same "avoid" items on 97% of consecutive days. Fixes: signals
+  carry a `scope` (`daily` or `standing`); the do and don't lists are filled from daily signals first; every rule
+  family is centred so its long-run expected contribution is zero and the average day scores 3.
+- **Level A needs rules that change daily.** The day's nakshatra category (Dhruva, Chara, Kshipra, Mridu, Ugra,
+  Tikshna, Mishra) and tithi category (Nanda, Bhadra, Jaya, Purna, Rikta, Amavasya) are now rule families. They
+  cut repetition of the "do" items from 84% to 11% and of the "avoid" items from 58% to 40% on Level A.
+- **A float comparison dropped the last daytime choghadiya slot on 43% of days.** Fixed and tested.
+- Acceptance is measured by a script (score balance and list repetition across 12 Moon signs and a year); a
+  version of it should move into the repository's tests or CI.
+
+Known weak points: area scoring detects some rule families by signal-id prefix (brittle); the one-sided rules
+(Vishti karana, inauspicious yogas, Saturn cycles) are corrected by an offset, not by a partition; Abhijit
+Muhurat is treated as valid every weekday, which some sources dispute; the "coming up" ingress search is redone
+on every call.
+
 ## 1. Goal
 
 Every day, each user gets guidance that is personal to their chart, explains itself, and fits a
