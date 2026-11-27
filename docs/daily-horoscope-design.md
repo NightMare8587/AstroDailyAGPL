@@ -277,3 +277,21 @@ Phases 1 and 3 are code I can build now. Phase 2 is gated on who reviews the tex
 - **Trust and harm:** fear-based or health-related claims; mitigated by the tone guide and lint.
 - **Regulation:** astrology services and advertising claims are regulated in places; get advice before
   marketing any specific claim.
+
+
+## 6.4 Content library: status (built 2026-11-27)
+
+Built: `content_snippets` table (migration 0006), `astrodaily/content/` (keys, lint, render, catalog,
+coverage, apply), importer `python -m astrodaily.tools.import_content <folder> [--check] [--version v]`,
+and cards now carry per-line `text` and `text_lang` next to the engine's `reason`.
+
+- **Fallback chain per line:** reviewed snippet in the requested language, then reviewed English, then the
+  engine's English `reason`. `translated` is true only when every shown suggestion is in the requested language.
+- **Only `reviewed` rows are served**, plus `draft` when `CONTENT_ALLOW_DRAFT=true` (off by default).
+- **Content keys** are the signal ids, with one key `dasha` for all dasha periods. A test sweeps ~15 months of
+  real Level A and B days and fails if the engine emits a signal the library has no key for, or a slot it cannot fill.
+- **Variants** rotate deterministically with the subject and date (same card, same words; other days differ).
+- **Sample set** `content-samples/v0-draft.json`: 63 keys, 1 variant each, English and Hindi, all `draft`.
+  Hindi is model-drafted and must be read by a native speaker. The real library belongs in the private content repo.
+- **Still to do:** 3 to 4 variants per key, area notes, reviewer sign-off (then flip rows to `reviewed`),
+  and Gemini drafting of the extra variants.

@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     access_token_minutes: int = 15
     refresh_token_days: int = 60
 
+    # Content library: show draft (unreviewed) wording. Keep false in production until a reviewer approves.
+    content_allow_draft: bool = False
+
     # Most birth profiles one account may keep (the user's own plus family).
     max_profiles_per_user: int = 5
 

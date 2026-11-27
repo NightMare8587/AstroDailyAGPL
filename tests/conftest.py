@@ -17,9 +17,12 @@ def _configure_ephemeris():
 @pytest.fixture(autouse=True)
 def _fresh_rate_limits():
     from astrodaily import ratelimit
+    from astrodaily.content import catalog
     ratelimit.reset()
+    catalog.reset()
     yield
     ratelimit.reset()
+    catalog.reset()
 
 
 def _backends():
@@ -60,7 +63,7 @@ def engine(request):
         get_settings.cache_clear()
     eng = create_engine(normalize_database_url(url))
     with eng.begin() as conn:
-        conn.execute(text("TRUNCATE users, places CASCADE"))
+        conn.execute(text("TRUNCATE users, places, content_snippets CASCADE"))
     yield eng
     eng.dispose()
 

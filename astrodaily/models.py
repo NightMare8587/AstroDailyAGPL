@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime, time, timezone
 
 from sqlalchemy import (
-    Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, SmallInteger, String, Time, UniqueConstraint, Uuid,
+    Text, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, SmallInteger, String, Time, UniqueConstraint, Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -138,3 +138,25 @@ class HoroscopeFeedback(Base):
 
     user: Mapped[User] = relationship(back_populates="feedback")
     profile: Mapped["BirthProfile | None"] = relationship(back_populates="feedback")
+
+
+class ContentSnippet(Base):
+    """One line of wording for one signal, language and variant. Only ``reviewed`` rows reach users
+    (``draft`` too when CONTENT_ALLOW_DRAFT is on). Loaded from the private content repo by
+    ``tools/import_content.py``; never edited by hand."""
+    __tablename__ = "content_snippets"
+    __table_args__ = (
+        UniqueConstraint("signal_key", "lang", "kind", "variant", name="uq_content_snippet"),
+        Index("ix_content_lookup", "signal_key", "lang", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    signal_key: Mapped[str] = mapped_column(String(64))
+    lang: Mapped[str] = mapped_column(String(2))
+    kind: Mapped[str] = mapped_column(String(16), default="line")
+    variant: Mapped[int] = mapped_column(SmallInteger)
+    text: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(12), default="draft")
+    version: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)

@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 
 from ..auth.deps import get_current_user, get_optional_user
 from ..calc import zodiac
+from ..content import catalog as content_catalog
+from ..content.apply import localize
 from ..db import get_db, get_optional_db
 from ..horoscope import service
 from ..horoscope.card import DISCLAIMER
@@ -48,8 +50,10 @@ class SignalOut(BaseModel):
     id: str
     kind: str
     scope: str
-    reason: str
+    reason: str                 # the engine's own English wording, always present
     params: dict[str, Any]
+    text: str | None = None     # reviewed library wording, when there is some
+    text_lang: Lang | None = None
 
 
 class WindowOut(BaseModel):
@@ -102,7 +106,7 @@ class HoroscopeOut(BaseModel):
     why: list[SignalOut]
     panchang: PanchangBriefOut
     requested_language: Lang
-    text_language: Lang      # the wording is English until the content library exists
+    text_language: Lang      # the language of the wording (en when the library has none in the requested one)
     translated: bool
     disclaimer: Named
     generated_by: str
@@ -150,11 +154,13 @@ def _day(requested: date_type | None, loc: service.DayLocation) -> date_type:
     return day
 
 
-def _response(core: dict[str, Any], loc: service.DayLocation, subject: SubjectOut, lang: Lang) -> HoroscopeOut:
-    card = service.with_location(core, loc)
+def _response(core: dict[str, Any], loc: service.DayLocation, subject: SubjectOut, lang: Lang,
+              db: Session | None, seed: str) -> HoroscopeOut:
+    card, in_lang = localize(service.with_location(core, loc), content_catalog.get_catalog(db), lang,
+                             f"{seed}:{core['date']}")
     return HoroscopeOut(
-        **card, subject=subject, requested_language=lang, text_language="en", translated=False,
-        disclaimer=Named(**DISCLAIMER_NAMED),
+        **card, subject=subject, requested_language=lang, text_language=lang if in_lang else "en",
+        translated=in_lang, disclaimer=Named(**DISCLAIMER_NAMED),
     )
 
 
@@ -194,7 +200,7 @@ def rashi_horoscope(
     loc = _explicit_location(db, place_id, lat, lon, tz) or _home_location(user) or service.DEFAULT_LOCATION
     day = _day(date, loc)
     core = _compute(service.rashi_card_core, rashi, day, loc.latitude, loc.longitude, loc.timezone)
-    return _response(core, loc, _rashi_subject(rashi), lang)
+    return _response(core, loc, _rashi_subject(rashi), lang, db, f"rashi:{rashi}")
 
 
 # ---------------------------------------------------------------- personal (consent required)
@@ -215,7 +221,8 @@ def _personal(p: BirthProfile, user: User, db: Session, date: date_type | None, 
     # Where is the person today? An explicit place, else their home city, else where they were born.
     loc = _explicit_location(db, place_id, lat, lon, tz) or _home_location(user) or _profile_location(p)
     day = _day(date, loc)
-    return _response(_profile_card(p, day, loc), loc, SubjectOut(type="profile", profile_id=p.id), lang)
+    return _response(_profile_card(p, day, loc), loc, SubjectOut(type="profile", profile_id=p.id), lang, db,
+                     f"profile:{p.id}")
 
 
 @profile_router.get("/{profile_id}/horoscope", response_model=HoroscopeOut)
@@ -254,8 +261,8 @@ def my_horoscope_widget(
     card = _personal(_first_profile(user), user, db, date, None, None, None, None, lang)
     return WidgetOut(
         date=card.date, score=card.score, level=card.level,
-        headline=card.dos[0].reason if card.dos else None,
-        caution=card.donts[0].reason if card.donts else None,
+        headline=(card.dos[0].text or card.dos[0].reason) if card.dos else None,
+        caution=(card.donts[0].text or card.donts[0].reason) if card.donts else None,
         best_window=card.windows.best[0] if card.windows.best else None,
         # The avoid list is in time order; the widget shows Rahu Kaal, the one people know.
         avoid_window=next((w for w in card.windows.avoid if w.label == "Rahu Kaal"),
