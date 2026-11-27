@@ -3,12 +3,14 @@ from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import swisseph as swe
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .. import __version__
-from .places_routes import PlaceOut
+from ..auth.deps import get_optional_user
+from ..models import User
+from .schemas import PlaceOut
 from ..calc.panchang import Element, Span, compute_panchang
 from ..config import get_settings
 from ..db import get_optional_db
@@ -57,6 +59,7 @@ class PanchangOut(BaseModel):
     abhijit: SpanOut
     choghadiya: list[SpanOut]
     place: PlaceOut | None = None
+    location_source: str  # place_id, coordinates or home
     ayanamsa_lahiri: float
     ayanamsa_note: str = "Lahiri (Chitrapaksha) sidereal; Swiss Ephemeris Moshier unless ephemeris files configured"
 
@@ -79,17 +82,25 @@ def health() -> dict:
 @router.get("/v1/panchang", response_model=PanchangOut,
             dependencies=[Depends(limit("panchang", "rate_limit_panchang_per_minute"))])
 def panchang(
+    request: Request,
     date: date_type = Query(..., description="Local calendar date, YYYY-MM-DD"),
     place_id: int | None = Query(None, description="GeoNames place id from /v1/places/search. Use this or lat+lon."),
     lat: float | None = Query(None, ge=-66.0, le=66.0, description="Latitude, degrees north"),
     lon: float | None = Query(None, ge=-180.0, le=180.0, description="Longitude, degrees east"),
     tz: str | None = Query(None, description="IANA timezone name (default Asia/Kolkata, or the place's own)"),
     db: Session | None = Depends(get_optional_db),
+    user: User | None = Depends(get_optional_user),
 ) -> PanchangOut:
     if not MIN_DATE <= date <= MAX_DATE:
         raise HTTPException(status_code=422, detail=f"date must be between {MIN_DATE} and {MAX_DATE}")
     place = None
-    if place_id is not None:
+    source = "coordinates"
+    if place_id is None and lat is None and lon is None and user is not None:
+        if user.home_place is None:
+            raise HTTPException(status_code=422, detail="No location given and no home place set. Set one with PATCH /v1/me.")
+        place, source = user.home_place, "home"
+        lat, lon, tz = place.latitude, place.longitude, tz or place.timezone
+    elif place_id is not None:
         if lat is not None or lon is not None:
             raise HTTPException(status_code=422, detail="Give either place_id or lat and lon, not both")
         if db is None:
@@ -99,7 +110,10 @@ def panchang(
             raise HTTPException(status_code=404, detail="Place not found")
         lat, lon = place.latitude, place.longitude
         tz = tz or place.timezone
+        source = "place_id"
     elif lat is None or lon is None:
+        if place_id is None and lat is None and lon is None and request.state.bad_token:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
         raise HTTPException(status_code=422, detail="Give place_id, or both lat and lon")
     tz = tz or "Asia/Kolkata"
     try:
@@ -118,6 +132,6 @@ def panchang(
         rahu_kaal=_span(p["rahu_kaal"]), gulika_kaal=_span(p["gulika_kaal"]),
         yamaganda=_span(p["yamaganda"]), abhijit=_span(p["abhijit"]),
         choghadiya=[_span(s) for s in p["choghadiya"]], ayanamsa_lahiri=p["ayanamsa"],
-        place=PlaceOut.from_place(place) if place else None,
+        place=PlaceOut.from_place(place) if place else None, location_source=source,
     )
 

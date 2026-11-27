@@ -177,3 +177,74 @@ def test_panchang_place_id_without_database_is_503(monkeypatch):
     r = TestClient(app).get("/v1/panchang", params={"date": "2025-11-05", "place_id": 1})
     assert r.status_code == 503
     assert TestClient(app).get("/v1/panchang", params={"date": "2025-11-05", "lat": 28.6, "lon": 77.2}).status_code == 200
+
+
+# ---- home city ----
+
+def _login(client, sub="alice"):
+    r = client.post("/v1/auth/google", json={"id_token": f"good-{sub}"})
+    assert r.status_code == 200, r.text
+    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+def test_set_clear_and_validate_home_place(seeded):
+    h = _login(seeded)
+    assert seeded.get("/v1/me", headers=h).json()["home_place"] is None
+    r = seeded.patch("/v1/me", headers=h, json={"home_place_id": 1275339})
+    assert r.status_code == 200 and r.json()["home_place"]["name"] == "Mumbai"
+    assert seeded.get("/v1/me", headers=h).json()["home_place"]["timezone"] == "Asia/Kolkata"
+    # Other fields keep the home place; unknown ids are rejected and change nothing.
+    assert seeded.patch("/v1/me", headers=h, json={"language": "hi"}).json()["home_place"]["id"] == 1275339
+    assert seeded.patch("/v1/me", headers=h, json={"home_place_id": 999}).status_code == 422
+    assert seeded.get("/v1/me", headers=h).json()["home_place"]["id"] == 1275339
+    r = seeded.patch("/v1/me", headers=h, json={"home_place_id": None})
+    assert r.status_code == 200 and r.json()["home_place"] is None
+
+
+def test_panchang_uses_home_place_when_no_location_given(seeded):
+    h = _login(seeded)
+    d = {"date": "2025-11-05"}
+    r = seeded.get("/v1/panchang", params=d, headers=h)
+    assert r.status_code == 422 and "home place" in r.json()["detail"]
+    seeded.patch("/v1/me", headers=h, json={"home_place_id": 1275339})
+    home = seeded.get("/v1/panchang", params=d, headers=h)
+    assert home.status_code == 200
+    assert home.json()["place"]["name"] == "Mumbai" and home.json()["location_source"] == "home"
+    mumbai = seeded.get("/v1/panchang", params={**d, "place_id": 1275339}).json()
+    assert home.json()["sunrise"] == mumbai["sunrise"] and mumbai["location_source"] == "place_id"
+    # Explicit location always wins over the home place.
+    delhi = seeded.get("/v1/panchang", params={**d, "place_id": 1273294}, headers=h).json()
+    assert delhi["place"]["name"] == "Delhi" and delhi["sunrise"] != home.json()["sunrise"]
+    coords = seeded.get("/v1/panchang", params={**d, "lat": 28.6, "lon": 77.2}, headers=h).json()
+    assert coords["location_source"] == "coordinates" and coords["place"] is None
+
+
+def test_bad_token_only_matters_when_the_home_place_is_needed(seeded):
+    bad = {"Authorization": "Bearer garbage"}
+    d = {"date": "2025-11-05"}
+    assert seeded.get("/v1/panchang", params=d, headers=bad).status_code == 401
+    ok = seeded.get("/v1/panchang", params={**d, "lat": 28.6, "lon": 77.2}, headers=bad)
+    assert ok.status_code == 200  # a stale token must not break a public request
+    assert seeded.get("/v1/panchang", params=d).status_code == 422  # anonymous, no location
+
+
+def test_reimport_keeps_home_place_and_clears_vanished_ones(seeded, tmp_path, engine):
+    from sqlalchemy.orm import Session
+    h = _login(seeded)
+    d = _write_data_dir(tmp_path)
+    ig.import_country(engine, "IN", d)  # places 1, 4, 5 from the fixture data
+    seeded.patch("/v1/me", headers=h, json={"home_place_id": 4})
+    ig.import_country(engine, "IN", d)  # same file again: the home place must survive
+    assert seeded.get("/v1/me", headers=h).json()["home_place"]["id"] == 4
+    d2 = _write_data_dir(tmp_path, GEONAMES_ROWS[:1])  # place 4 no longer in GeoNames
+    ig.import_country(engine, "IN", d2)
+    assert seeded.get("/v1/me", headers=h).json()["home_place"] is None
+    with Session(engine) as db:
+        assert [p.id for p in db.scalars(select(Place))] == [1]
+
+
+def test_deleting_account_leaves_places_alone(seeded):
+    h = _login(seeded)
+    seeded.patch("/v1/me", headers=h, json={"home_place_id": 1275339})
+    assert seeded.delete("/v1/me", headers=h).status_code == 204
+    assert seeded.get("/v1/places/1275339").status_code == 200

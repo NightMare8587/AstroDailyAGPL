@@ -2,9 +2,10 @@
 
     python -m astrodaily.tools.import_geonames --country IN
 
-Data: GeoNames (https://www.geonames.org), licensed CC BY 4.0. Safe to re-run: the country's rows
-are replaced inside one transaction. Downloads go to a temporary folder unless --data-dir already
+Data: GeoNames (https://www.geonames.org), licensed CC BY 4.0. Safe to re-run, in one transaction. Downloads go to a temporary folder unless --data-dir already
 holds the files (<CC>.zip, alternatenames_<CC>.zip, admin1CodesASCII.txt, admin2Codes.txt).
+Places are updated in place (GeoNames ids are stable), so users' saved home places survive a re-run;
+only places that no longer exist in GeoNames are removed.
 """
 import argparse
 import csv
@@ -17,6 +18,7 @@ from collections.abc import Iterable, Iterator
 from pathlib import Path
 
 from sqlalchemy import create_engine, delete, insert, select
+from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.engine import Engine
 
 from ..config import get_settings
@@ -103,22 +105,33 @@ def _download(name: str, dest: Path) -> Path:
     return target
 
 
+def _upsert(engine: Engine):
+    """INSERT ... ON CONFLICT (id) DO UPDATE for places, for the engine's SQL dialect."""
+    ins = postgresql.insert if engine.dialect.name == "postgresql" else sqlite.insert
+    stmt = ins(Place)
+    columns = [c.name for c in Place.__table__.columns if c.name != "id"]
+    return stmt.on_conflict_do_update(index_elements=[Place.id], set_={c: stmt.excluded[c] for c in columns})
+
+
 def import_country(engine: Engine, country: str, data_dir: Path) -> tuple[int, int]:
-    """Load files from data_dir into the DB. Returns (places, names) inserted."""
+    """Load files from data_dir into the DB. Returns (places, names) processed."""
     admin1 = load_admin_names(open(data_dir / "admin1CodesASCII.txt", encoding="utf-8", newline=""), country)
     admin2 = load_admin_names(open(data_dir / "admin2Codes.txt", encoding="utf-8", newline=""), country)
     hindi = load_hindi_names(_read_zip_member(data_dir / f"alternatenames_{country}.zip", f"{country}.txt"))
+    upsert = _upsert(engine)
     places = names = 0
+    seen: set[int] = set()
     with engine.begin() as conn:
-        old = select(Place.id).where(Place.country_code == country)
-        conn.execute(delete(PlaceName).where(PlaceName.place_id.in_(old)))
-        conn.execute(delete(Place).where(Place.country_code == country))
+        existing_ids = set(conn.scalars(select(Place.id).where(Place.country_code == country)))
+        # Search names carry no references, so they are simply rebuilt.
+        conn.execute(delete(PlaceName).where(PlaceName.place_id.in_(
+            select(Place.id).where(Place.country_code == country))))
         place_batch: list[dict] = []
         name_batch: list[dict] = []
 
         def flush() -> None:
             if place_batch:
-                conn.execute(insert(Place), place_batch)
+                conn.execute(upsert, place_batch)
             if name_batch:
                 conn.execute(insert(PlaceName), name_batch)
             place_batch.clear()
@@ -127,6 +140,9 @@ def import_country(engine: Engine, country: str, data_dir: Path) -> tuple[int, i
         for place, norms in parse_places(
             _read_zip_member(data_dir / f"{country}.zip", f"{country}.txt"), country, admin1, admin2, hindi
         ):
+            if place["id"] in seen:
+                continue
+            seen.add(place["id"])
             place_batch.append(place)
             name_batch.extend({"place_id": place["id"], "name_norm": n} for n in norms)
             places += 1
@@ -134,6 +150,10 @@ def import_country(engine: Engine, country: str, data_dir: Path) -> tuple[int, i
             if len(place_batch) >= BATCH:
                 flush()
         flush()
+        # Places GeoNames no longer lists. Users who had one as home city get it cleared (ON DELETE SET NULL).
+        gone = sorted(existing_ids - seen)
+        for i in range(0, len(gone), 1000):
+            conn.execute(delete(Place).where(Place.id.in_(gone[i:i + 1000])))
     return places, names
 
 

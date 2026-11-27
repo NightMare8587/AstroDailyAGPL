@@ -27,6 +27,12 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # The user's home city, picked once from place search. Cleared automatically if the place is removed.
+    home_place_id: Mapped[int | None] = mapped_column(
+        ForeignKey("places.id", ondelete="SET NULL"), nullable=True
+    )
+    home_place: Mapped["Place | None"] = relationship(lazy="joined")
+
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

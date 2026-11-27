@@ -6,30 +6,12 @@ from ..db import get_db
 from ..models import Place
 from ..places.search import MIN_QUERY_LENGTH, search_places
 from ..ratelimit import limit
+from .schemas import PlaceOut
 
 router = APIRouter(prefix="/v1/places", tags=["places"],
                    dependencies=[Depends(limit("places", "rate_limit_default_per_minute"))])
 
 ATTRIBUTION = "Place data from GeoNames (https://www.geonames.org), licensed CC BY 4.0"
-
-
-class PlaceOut(BaseModel):
-    id: int
-    name: str
-    name_hi: str | None
-    state: str | None
-    district: str | None
-    country_code: str
-    latitude: float
-    longitude: float
-    population: int
-    timezone: str
-
-    @classmethod
-    def from_place(cls, p: Place) -> "PlaceOut":
-        return cls(id=p.id, name=p.name, name_hi=p.name_hi, state=p.state, district=p.district,
-                   country_code=p.country_code, latitude=p.latitude, longitude=p.longitude,
-                   population=p.population, timezone=p.timezone)
 
 
 class PlaceSearchOut(BaseModel):

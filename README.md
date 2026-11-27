@@ -68,13 +68,20 @@ ignores accents and case. `GET /v1/places/{id}` returns one place.
 `GET /v1/panchang?date=...&place_id=<id>` uses the place's coordinates and timezone, as an
 alternative to `lat` and `lon`.
 
+**Home city.** During onboarding the app lets the user pick a home city with the place search and
+saves it: `PATCH /v1/me {"home_place_id": 1273294}` (send `null` to clear it; `GET /v1/me` returns
+`home_place`). A signed-in user can then call `GET /v1/panchang?date=...` with no location and the
+home city is used (`location_source: "home"`). A location in the request always wins. No device
+location permission is needed. An invalid token is ignored when the request carries its own
+location, and answers 401 only when the home city is needed.
+
 Load the data (GeoNames, CC BY 4.0, about 558k populated places in India, 150 MB, about 20 seconds):
 
 ```
 DATABASE_URL=... .venv/bin/python -m astrodaily.tools.import_geonames --country IN
 ```
 
-It is safe to re-run; it replaces that country's rows. GeoNames gives population for only about 7,400
+It is safe to re-run: places are updated in place, so users' saved home cities survive. GeoNames gives population for only about 7,400
 Indian places, so villages sort alphabetically after the towns; always show state and district.
 Hindi names exist for only about 1,400 places. Birth times before 1947 need care: the IANA
 `Asia/Kolkata` zone knows local mean time and wartime offsets, but the app should let the user

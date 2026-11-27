@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -37,6 +37,7 @@ def engine(request):
 
     if request.param == "sqlite":
         eng = create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
+        event.listen(eng, "connect", lambda conn, _: conn.execute("PRAGMA foreign_keys=ON"))
         Base.metadata.create_all(eng)
         yield eng
         eng.dispose()
