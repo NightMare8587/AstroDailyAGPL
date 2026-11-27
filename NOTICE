@@ -1,0 +1,23 @@
+AstroDaily
+Copyright (C) 2026 AstroDaily contributors
+Licensed under the GNU Affero General Public License v3.0 (see LICENSE).
+
+Third-party software
+--------------------
+
+Swiss Ephemeris
+  Copyright (C) Astrodienst AG, Zurich, Switzerland.
+  Used under the GNU Affero General Public License, version 3 (the AGPL option of the
+  Swiss Ephemeris dual licence). Not used under the Swiss Ephemeris Professional License.
+  https://www.astro.com/swisseph/
+
+pyswisseph (Python binding for Swiss Ephemeris)
+  Licensed under the GNU Affero General Public License, version 3.
+  https://github.com/astrorigin/pyswisseph
+
+Place data
+  GeoNames (https://www.geonames.org), licensed under Creative Commons Attribution 4.0.
+
+Source code
+  The complete corresponding source of this service is available at
+  https://github.com/NightMare8587/AstroDailyAGPL
