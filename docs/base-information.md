@@ -64,12 +64,25 @@ provider's terms of service before relying on one.
   - shriramjiastro/bphs-97-chapters-sanskrit-dataset: CC-BY-SA-4.0, 97 rows of chapter metadata
     and formulas, not full text. ShareAlike applies to derivatives.
 
-## 6. LLM pricing
+## 6. Gemini models (Google AI Studio pricing page, read 2026-11-27)
 
-Gemini 2.5 Flash ($0.30 input, $2.50 output per 1M tokens) is deprecated and routes to 3.5
-Flash-Lite from 2026-12-01. Listed on the pricing page: 3.5 Flash-Lite ($0.30 input, $2.50
-output, $0.03 cached input), and 3.6 and 3.8 Flash ($0.75 input, $3.75 output until 2026-12-31,
-then double). Choose after testing quality, and re-check prices.
+USD per 1M tokens, Standard paid tier. "summary" means not read verbatim.
+
+| Model | Input | Output | Cached input | Free tier | Notes |
+|---|---|---|---|---|---|
+| gemini-3.5-flash-lite | 0.30 | 2.50 | 0.03 | Yes (no caching) | Stable. Fastest, cheapest 3.5; described for high volume and translation. |
+| gemini-3.6-flash | 0.75, then 1.50 from 2027-01-01 | 3.75, then 7.50 | 0.075, then 0.15 | Yes | Stable. |
+| gemini-3.8-flash | same as 3.6 | same | same | Yes | Stable. Page descriptions conflict on whether it is the newest Flash. |
+| gemini-3.1-flash-lite | 0.25 (summary) | 1.50 (summary) | 0.025 (summary) | Yes (summary) | Stable. |
+| gemini-4-hydrogen | 1.50 | 7.50 | 0.075 | Yes | Everyday coding and agents. |
+| gemini-4-neon | 3.00 | 15.00 | 0.15 | No | Frontier. |
+| gemini-4-argon / carbon | 2.00 until 2026-11-30, then 4.00 | 10.00, then 20.00 | 0.10, then 0.20 | No | Too costly for chat. |
+| gemini-2.5-flash | 0.30 | 2.50 | 0.03 | | Deprecated; routes to 3.5 Flash-Lite on 2026-12-01. |
+| gemini-2.5-flash-lite | 0.10 | 0.40 | 0.01 | | API limited to existing users; not for new projects. |
+
+Gaps: no model is described as best for Hindi (test quality ourselves); context windows and
+free-tier rate limits were not found; the free tier says data may be used to improve Google
+products, so do not send real user birth data through free-tier keys.
 
 ## 7. Corrections to the first research pass
 

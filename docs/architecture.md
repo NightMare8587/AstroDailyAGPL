@@ -10,7 +10,7 @@ Status: draft v0.1 (2026-11-27). Decisions are marked **Decided** or **Open**.
 - Kundli: birth chart, dashas (Vimshottari first), transits (gochara).
 - Flutter app with home-screen widgets and push notifications.
 - AI 1-to-1 guidance from birth data and computed chart data. No human astrologer.
-- Languages: English and Hindi. **Open:** whether both ship at launch.
+- Languages: English and Hindi, both at launch. **Decided**
 
 ## 2. Principles
 
@@ -45,11 +45,11 @@ Postgres (users, birth data, charts, cached results)      Redis (panchang cache,
 | Backend language | Python 3, FastAPI. **Decided** | Best Vedic ecosystem; `pyswisseph` ships Linux wheels. |
 | Ephemeris | Swiss Ephemeris via `pyswisseph`, AGPL option. **Decided** | Moshier mode needs no data files; add `.se1` files for full precision. |
 | Hosting | Railway. **Decided** | One API service, Postgres, optional Redis, a cron service. |
-| Database | Postgres. **Decided** | Users, birth details, stored charts, cached daily output. |
+| Database | Postgres. **Decided** | Users, birth details, stored charts, cached daily output. Relational data with JSONB for chart blobs. |
 | Cache | Redis, or Postgres at first. **Open** | Start simple; add Redis when load needs it. |
 | Mobile | Flutter. **Decided** | Widgets and notifications are the retention driver. |
-| LLM | **Open** | Gemini 2.5 Flash is deprecated (routed to 3.5 Flash-Lite from 2026-12-01). Re-check current models and prices before choosing. |
-| Auth | **Open** | Phone OTP is typical in India; needs an SMS provider and cost check. |
+| LLM | Gemini. **Decided** (model **Open**) | Gemini 2.5 Flash is deprecated. Candidates: 3.5 Flash-Lite (cheap default), 3.6/3.8 Flash (better quality). See base-information section 6. |
+| Auth | Google Sign-In for now. **Decided** | Phone OTP can be added later (needs an SMS provider and cost check). |
 | Push | **Open** | FCM for Android; APNs for iOS. |
 
 ## 4. Calculation engine
@@ -103,6 +103,7 @@ Postgres (users, birth data, charts, cached results)      Redis (panchang cache,
 |---|---|---|---|
 | AstroDailyAGPL (this repo) | Public | AGPL-3.0 | Calc engine, API, app code |
 | Content repo (to create) | Private | All rights reserved | Horoscope copy (EN/HI), knowledge base, prompts |
+| Flutter app repo (to create) | Private | All rights reserved | Mobile app. Talks to the API over HTTPS only; no Swiss Ephemeris code inside. |
 
 Swiss Ephemeris is used under its AGPL option. That obliges the whole project that uses it to be
 AGPL, including when served over a network. If the app earns money later, the CHF 700 Professional
@@ -121,9 +122,8 @@ businesses. This is a summary, not legal advice.
 
 ## 10. Open questions
 
-1. LLM model and monthly budget.
-2. English only or English and Hindi at launch.
-3. Login method (phone OTP, Google, or both) and who pays for SMS.
-4. Whether the Flutter app is in this AGPL repo or a separate one (licence boundary, see
-   section 8; get a legal opinion before launch).
-5. Redis from day one or Postgres-only caching at first.
+1. Which Gemini model for chat, and the monthly budget (see base-information section 6).
+2. Redis from day one or Postgres-only caching at first.
+3. Legal opinion on the AGPL server and private app boundary before launch (the Professional
+   contract treats an app that requests calculations from a server as containing Swiss Ephemeris).
+4. Privacy: birth details are personal data; decide retention, deletion and consent text.
