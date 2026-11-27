@@ -248,3 +248,35 @@ def test_deleting_account_leaves_places_alone(seeded):
     seeded.patch("/v1/me", headers=h, json={"home_place_id": 1275339})
     assert seeded.delete("/v1/me", headers=h).status_code == 204
     assert seeded.get("/v1/places/1275339").status_code == 200
+
+
+# ---- Hindi search for big cities (production bug: the Hindi name fell off the 12-name cap) ----
+
+def test_hindi_name_survives_the_name_cap_for_places_with_many_alternates():
+    many = ",".join(f"Alias{i}" for i in range(40))
+    rows = [row(7, "Pune", many, pop="3124458")]
+    out = list(ig.parse_places(rows, "IN", {}, {}, {7: "पुणे"}))
+    _, names = out[0]
+    assert len(names) <= ig.MAX_NAMES_PER_PLACE
+    assert "पुणे" in names and "pune" in names
+
+
+def test_search_finds_a_hindi_name_stored_only_on_the_place(engine):
+    """Places imported before the fix have name_hi but no Hindi row in place_names."""
+    from sqlalchemy.orm import Session
+
+    from astrodaily.places.search import search_places
+    with Session(engine) as db:
+        db.add(Place(id=1259229, name="Pune", name_hi="पुणे", state="Maharashtra", district="Pune Division",
+                     country_code="IN", latitude=18.51957, longitude=73.85535, population=3124458,
+                     timezone="Asia/Kolkata"))
+        db.add(PlaceName(place_id=1259229, name_norm="pune"))  # no Hindi row, as in production
+        db.add(Place(id=2, name="Punaura", name_hi=None, country_code="IN", latitude=1.0, longitude=1.0,
+                     population=10, timezone="Asia/Kolkata"))
+        db.add(PlaceName(place_id=2, name_norm="punaura"))
+        db.commit()
+        assert [p.name for p in search_places(db, "पुणे")] == ["Pune"]
+        assert [p.name for p in search_places(db, "पु")] == ["Pune"]  # prefix works in Hindi too
+        assert [p.name for p in search_places(db, "pun")] == ["Pune", "Punaura"]  # English unchanged, biggest first
+        assert search_places(db, "मुंबई") == []
+        assert search_places(db, "प") == []  # still needs two characters

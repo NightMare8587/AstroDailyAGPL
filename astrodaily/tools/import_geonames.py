@@ -79,9 +79,12 @@ def parse_places(
             "country_code": country, "latitude": lat, "longitude": lon,
             "population": population, "timezone": row[17] or "UTC",
         }
-        raw = [row[1], row[2], *(row[3].split(",") if row[3] else [])]
+        # The Hindi name goes right after the primary names: big cities have hundreds of alternate names and the
+        # per-place cap would otherwise cut the Hindi one off (Pune, Delhi and Mumbai were unsearchable in Hindi).
+        raw = [row[1], row[2]]
         if name_hi:
             raw.append(name_hi)
+        raw += row[3].split(",") if row[3] else []
         names: list[str] = []
         for n in raw:
             norm = normalize(n)

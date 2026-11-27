@@ -73,6 +73,9 @@ class RefreshToken(Base):
 class Place(Base):
     """A populated place from GeoNames (CC BY 4.0). Coordinates may be stored permanently."""
     __tablename__ = "places"
+    __table_args__ = (
+        Index("ix_places_name_hi", "name_hi", postgresql_ops={"name_hi": "text_pattern_ops"}),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)  # GeoNames id
     name: Mapped[str] = mapped_column(String(200))
