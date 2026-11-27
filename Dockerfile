@@ -3,12 +3,12 @@ WORKDIR /app
 COPY pyproject.toml README.md alembic.ini ./
 COPY astrodaily ./astrodaily
 COPY alembic ./alembic
-# pyswisseph has no prebuilt wheel for this platform, so it compiles from source: gcc is needed
+# pyswisseph has no prebuilt wheel for this platform, so it compiles from source: a C and C++ compiler are needed
 # at build time only and is removed again to keep the image small.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends gcc libc6-dev \
+ && apt-get install -y --no-install-recommends g++ libc6-dev \
  && pip install --no-cache-dir . \
- && apt-get purge -y --auto-remove gcc libc6-dev \
+ && apt-get purge -y --auto-remove g++ libc6-dev \
  && rm -rf /var/lib/apt/lists/*
 ENV PORT=8000
 # Apply database migrations when DATABASE_URL is set, then start the API.
