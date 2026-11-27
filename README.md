@@ -7,8 +7,8 @@ computed chart data. There is no human astrologer in the loop.
 
 **Status:** early backend. Working: `GET /v1/panchang` (tithi, nakshatra, yoga, karana, rahu kaal,
 gulika, yamaganda, abhijit, choghadiya; English and Hindi), Google sign-in, sessions, and accounts
-on Postgres, and birth-place search over GeoNames (India). Not built yet: kundli, dashas, daily
-horoscope, AI chat. See [docs/architecture.md](docs/architecture.md) and
+on Postgres, birth-place search over GeoNames (India), and the kundli (birth chart and Vimshottari
+dasha). Not built yet: daily horoscope, AI chat. See [docs/architecture.md](docs/architecture.md) and
 [docs/base-information.md](docs/base-information.md).
 
 ## Plan in one paragraph
@@ -59,6 +59,24 @@ You must create the Google OAuth client IDs yourself (Google Cloud console) and 
 `GOOGLE_CLIENT_IDS` and `JWT_SECRET` on Railway. Google's signing certificates are fetched on each
 login; caching them is a later optimisation.
 
+## Kundli
+
+`POST /v1/kundli` calculates a birth chart. Nothing is stored. Body: `date`, `time` (local),
+the birth place as `place_id` (from place search) or `lat` and `lon` (+ optional `tz`), and optional
+`utc_offset_minutes` (overrides the timezone), `node` (`mean` default, or `true`) and `as_of` (date for
+the running dasha, default today). It returns the lagna, the nine grahas (sign, degree, nakshatra and
+pada, house, retrograde, dignity, Navamsa sign), the twelve houses, and the Vimshottari dasha: balance
+at birth, all nine mahadashas with their antardashas, and the mahadasha, antardasha and
+pratyantardasha running on `as_of`. Names are in English and Hindi.
+
+Conventions: sidereal, Lahiri ayanamsa; whole-sign houses (the lagna's sign is house 1); Rahu is the
+mean node by default and Ketu is opposite; nodes are shown retrograde; a dasha year is 365.25 days.
+`warnings` lists anything the user should confirm: births before 15 Aug 1947 (local mean time or
+wartime +06:30 may apply) and local times skipped or repeated by a clock change.
+
+Not built yet: divisional charts beyond Navamsa, bhava chalit houses, yogas, ashtakavarga, an unknown
+birth time mode, and saving a birth profile on the account.
+
 ## Places
 
 `GET /v1/places/search?q=<start of name>&limit=10` returns matching places, biggest first, each with
@@ -99,7 +117,11 @@ with more than one replica, move them to Redis. Panchang dates are limited to 18
 ## Verification status
 
 Checked against published values: Lahiri ayanamsa at J2000, Makar Sankranti 2025, and the
-tithi and end times around Diwali and Kartik Purnima 2025 (Delhi). Rahu Kaal, Gulika and
+tithi and end times around Diwali and Kartik Purnima 2025 (Delhi). The kundli was cross-checked
+against a different engine and ephemeris (`ndastro-engine`, Skyfield with JPL DE440) over 20 births
+from 1945 to 2024: the seven grahas agree to within 0.006 degrees, the lagna to 0.07 degrees, the true
+node to 0.08 degrees, and mahadasha start dates to within 1 to 3 days (a 0.006 degree Moon difference
+moves a 20-year dasha by about 3 days). Three of those births are fixed as reference values in the tests. Rahu Kaal, Gulika and
 Yamaganda use the standard weekday segment tables. The choghadiya tables were written from
 memory of the published tables and are not yet checked against an independent source.
 

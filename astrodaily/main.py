@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from . import __version__
 from .api.auth_routes import router as auth_router
+from .api.kundli_routes import router as kundli_router
 from .api.places_routes import router as places_router
 from .api.routes import router
 from .api.user_routes import router as user_router
@@ -16,3 +17,4 @@ app.include_router(router)
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(places_router)
+app.include_router(kundli_router)

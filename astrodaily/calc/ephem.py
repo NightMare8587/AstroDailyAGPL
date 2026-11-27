@@ -10,6 +10,13 @@ import swisseph as swe
 UNIX_EPOCH_JD = 2440587.5
 SUN = swe.SUN
 MOON = swe.MOON
+MARS = swe.MARS
+MERCURY = swe.MERCURY
+JUPITER = swe.JUPITER
+VENUS = swe.VENUS
+SATURN = swe.SATURN
+MEAN_NODE = swe.MEAN_NODE
+TRUE_NODE = swe.TRUE_NODE
 
 _base_flags = swe.FLG_MOSEPH
 
@@ -57,3 +64,15 @@ def next_sunrise(jd_start: float, lat: float, lon: float) -> float:
 
 def next_sunset(jd_start: float, lat: float, lon: float) -> float:
     return _rise_set(jd_start, lat, lon, swe.CALC_SET)
+
+
+def body_position(jd_ut: float, body: int) -> tuple[float, float]:
+    """(sidereal longitude in degrees, speed in degrees per day; negative = retrograde)."""
+    xx, _ = swe.calc_ut(jd_ut, body, _base_flags | swe.FLG_SIDEREAL | swe.FLG_SPEED)
+    return xx[0] % 360.0, xx[3]
+
+
+def ascendant(jd_ut: float, lat: float, lon: float) -> float:
+    """Sidereal longitude of the ascendant (lagna)."""
+    _, ascmc = swe.houses_ex(jd_ut, lat, lon, b"W", swe.FLG_SIDEREAL)
+    return ascmc[0] % 360.0

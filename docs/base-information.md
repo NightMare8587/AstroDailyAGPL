@@ -84,7 +84,19 @@ Gaps: no model is described as best for Hindi (test quality ourselves); context 
 free-tier rate limits were not found; the free tier says data may be used to improve Google
 products, so do not send real user birth data through free-tier keys.
 
-## 7. Corrections to the first research pass
+## 7. Kundli conventions and verification (2026-11-27)
+
+- Sidereal, Lahiri; whole-sign houses; mean node by default (true node optional); Vimshottari with a
+  365.25-day year. Other software differs on these choices (360-day or 365.2563-day years, bhava
+  chalit houses, true node default), so results can differ slightly from other apps by design.
+- Cross-check: `ndastro-engine` 0.28.1 (MIT, alpha) with JPL DE440. 20 births, 1945-2024, India plus
+  London and New York. Grahas within 0.006 degrees, lagna within 0.07 degrees, true node within 0.08
+  degrees, mahadasha starts within 1 to 3 days. The grahas' offset is the same for every planet on a
+  given date and changes sign between dates, so it is a small difference in the sidereal reference
+  between the two engines, not an error in one planet.
+- Not yet checked against a published chart of a real person.
+
+## 8. Corrections to the first research pass
 
 The first AI-generated research contained errors that were fixed above: a wrong Swiss Ephemeris
 term (99 years and CHF 400 per extra developer), invented AstrologyAPI plan tiers, USD prices
