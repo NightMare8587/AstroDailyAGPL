@@ -85,12 +85,9 @@ def slot_values(params: dict[str, Any], lang: str) -> dict[str, str]:
         "to_sign": _sign(params.get("to_sign"), lang),
         "from_sign": _sign(params.get("from_sign"), lang),
         "house": str(params["house"]) if params.get("house") is not None else None,
-        "karana": None,
         "tara_name": params.get("tara_name"),
         "when": str(params["when"]) if params.get("when") is not None else None,
     }
-    if lang == "en":
-        vals["karana"] = params.get("karana")
     return {k: v for k, v in vals.items() if v}
 
 

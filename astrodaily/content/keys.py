@@ -29,7 +29,7 @@ _add(["tithi_nanda", "tithi_bhadra", "tithi_jaya", "tithi_purna", "rikta_tithi",
 _add([f"vara_{v}" for v in _VARAS], {"vara", "lord"})
 _add(["special_ekadashi", "special_pradosh", "special_sankashti", "special_purnima"], set())
 _add(["inauspicious_yoga"], {"yoga"})
-_add(["vishti_karana"], {"karana"})
+_add(["vishti_karana"], set())  # always Vishti, so no slot
 _add(["chandra_bala_good", "chandra_bala_poor"], {"house", "moon_sign"})
 _add([f"tara_{t}" for t in _TARAS], {"nakshatra", "tara_name"})
 _add([f"gochara_{p}_{q}" for p in _PLANETS if p != "moon" for q in ("good", "poor")],
