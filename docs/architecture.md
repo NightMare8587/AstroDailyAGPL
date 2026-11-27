@@ -78,6 +78,8 @@ Postgres (users, birth data, charts, cached results)      Redis (panchang cache,
 
 ## 6. Daily horoscope and do/don't
 
+Full design: [daily-horoscope-design.md](daily-horoscope-design.md). Summary:
+
 1. Compute the user's natal chart once and store it.
 2. Each day, combine natal Moon and lagna, running dasha, current transits and the day's panchang.
 3. A rule engine maps these to tagged outcomes (for example "Moon transiting 8th: avoid new
