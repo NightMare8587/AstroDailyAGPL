@@ -3,7 +3,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import swisseph as swe
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,7 @@ from .. import __version__
 from ..auth.deps import get_optional_user
 from ..models import User
 from .schemas import PlaceOut
+from ..calc import ephem
 from ..calc.panchang import Element, Span, compute_panchang
 from ..config import get_settings
 from ..db import get_optional_db
@@ -74,9 +75,13 @@ def _element(e: Element) -> ElementOut:
 
 
 @router.get("/health")
-def health() -> dict:
+def health(response: Response) -> dict:
     settings = get_settings()
-    return {"status": "ok", "version": __version__, "gemini_model": settings.gemini_model}
+    ok, ayanamsa = ephem.self_check()  # runs in a worker thread, like real requests
+    if not ok:
+        response.status_code = 503
+    return {"status": "ok" if ok else "error", "version": __version__, "gemini_model": settings.gemini_model,
+            "ayanamsa_j2000": round(ayanamsa, 4)}
 
 
 @router.get("/v1/panchang", response_model=PanchangOut,

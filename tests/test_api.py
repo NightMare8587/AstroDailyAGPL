@@ -10,6 +10,7 @@ def test_health_exposes_configured_model(monkeypatch):
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
     assert r.json()["gemini_model"] == "gemini-3.5-flash-lite"
+    assert abs(r.json()["ayanamsa_j2000"] - 23.857) < 0.01  # Lahiri, computed in the request thread
 
 
 def test_gemini_model_is_configurable(monkeypatch):
@@ -47,3 +48,10 @@ def test_panchang_date_range_is_bounded():
     assert client.get("/v1/panchang", params={**base, "date": "1700-01-01"}).status_code == 422
     assert client.get("/v1/panchang", params={**base, "date": "1800-01-01"}).status_code == 200
     assert client.get("/v1/panchang", params={**base, "date": "2200-12-31"}).status_code == 200
+
+
+def test_health_reports_error_if_sidereal_mode_is_wrong(monkeypatch):
+    from astrodaily.calc import ephem
+    monkeypatch.setattr(ephem, "_prepare", lambda: __import__("swisseph").set_sid_mode(24))  # not Lahiri
+    r = client.get("/health")
+    assert r.status_code == 503 and r.json()["status"] == "error"

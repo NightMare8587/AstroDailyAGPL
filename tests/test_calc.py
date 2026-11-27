@@ -1,3 +1,4 @@
+import pytest
 from datetime import date, datetime, timedelta, timezone
 
 from astrodaily.calc import ephem, names
@@ -93,3 +94,31 @@ def test_elements_end_after_sunrise():
     p = compute_panchang(date(2026, 3, 14), *DELHI)
     for key in ("tithi", "nakshatra", "yoga", "karana"):
         assert p[key].ends_at > p["sunrise"]
+
+
+def test_sidereal_mode_is_reapplied_on_every_call():
+    """Regression: on Linux the sidereal mode set at start-up was invisible to worker threads, so the
+    server used Fagan-Bradley (0.9 degrees off Lahiri). Every calculation must set it itself."""
+    import swisseph as swe
+    jd = ephem.datetime_to_jd(datetime(1990, 5, 15, 4, 30, tzinfo=timezone.utc))
+    expected = ephem.ayanamsa(jd)
+    assert abs(expected - 23.7225) < 0.001
+    for mode in (swe.SIDM_FAGAN_BRADLEY, swe.SIDM_RAMAN, swe.SIDM_KRISHNAMURTI):
+        swe.set_sid_mode(mode)  # simulate a thread that has the wrong or default mode
+        assert ephem.ayanamsa(jd) == pytest.approx(expected)
+        swe.set_sid_mode(mode)
+        lon = ephem.sidereal_longitude(jd, ephem.SUN)
+        swe.set_sid_mode(mode)
+        assert ephem.body_position(jd, ephem.SUN)[0] == pytest.approx(lon)
+        swe.set_sid_mode(mode)
+        assert ephem.ascendant(jd, 28.6, 77.2) == pytest.approx(ephem.ascendant(jd, 28.6, 77.2))
+        swe.set_sid_mode(mode)
+        assert abs(lon - 30.369) < 0.01  # Sun on 15 May 1990, sidereal Lahiri
+
+
+def test_sidereal_mode_in_worker_threads():
+    from concurrent.futures import ThreadPoolExecutor
+    jd = ephem.datetime_to_jd(datetime(1990, 5, 15, 4, 30, tzinfo=timezone.utc))
+    with ThreadPoolExecutor(4) as pool:
+        values = list(pool.map(lambda _: ephem.ayanamsa(jd), range(8)))
+    assert all(abs(v - 23.7225) < 0.001 for v in values)
