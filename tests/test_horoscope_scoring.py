@@ -88,16 +88,35 @@ def test_rule_tables_are_centred_at_zero_expectation():
         ) / 27.0
         assert tara_exp == pytest.approx(0.0, abs=1e-9), area
 
+        # Nakshatra categories across 1..27
+        nak_exp = sum(
+            weights.WEIGHTS[f"nakshatra_{rules.NAKSHATRA_CATEGORY_BY_NUM[n]}"][area]
+            for n in range(1, 28)
+        ) / 27.0
+        assert nak_exp == pytest.approx(0.0, abs=1e-9), area
+
+        # Tithi categories across 1..30 (tithi 30 is Amavasya)
+        tithi_exp = sum(
+            weights.WEIGHTS[
+                "amavasya" if t == rules.AMAVASYA_TITHI_NUMBER else rules.TITHI_SIGNAL_BY_PAKSHA_NUM[(t - 1) % 15 + 1]
+            ][area]
+            for t in range(1, 31)
+        ) / 30.0
+        assert tithi_exp == pytest.approx(0.0, abs=1e-9), area
+
+        # Dasha base is 0 and house tone is centred across 1..12
+        assert weights.WEIGHTS["dasha_base"][area] == pytest.approx(0.0, abs=1e-9)
+        assert sum(rules.DASHA_HOUSE_TONE.values()) == pytest.approx(0.0, abs=1e-9)
+
         # Saturn cycles: 5/12 houses emit negative theme; subtracted by expected_saturn_cycle_drift
         sat_exp = sum(weights.WEIGHTS[k][area] for k in weights.SATURN_CYCLE_KEYS) / 12.0
         assert sat_exp - weights.expected_saturn_cycle_drift()[area] == pytest.approx(0.0, abs=1e-9), area
 
-        # Panchang penalties using natural frequencies (3/15, 1/30, 8/60, 7/27)
+        # Remaining one-sided Panchang penalties (Vishti 8/60, inauspicious yogas 7/27)
+        assert set(weights.PANCHANG_FREQUENCIES.keys()) == {"vishti_karana", "inauspicious_yoga"}
         pan_exp = (
-            (3.0 / 15.0) * weights.WEIGHTS["rikta_tithi"][area]
-            + (1.0 / 30.0) * weights.WEIGHTS["amavasya"][area]
-            + (8.0 / 60.0) * weights.WEIGHTS["vishti_karana"][area]
-            + (7.0 / 27.0) * weights.WEIGHTS["inauspicious_yoga"][area]
+            (8.0 / 60.0) * weights.WEIGHTS["vishti_karana"][area]
+            + (len(rules.INAUSPICIOUS_YOGAS) / 27.0) * weights.WEIGHTS["inauspicious_yoga"][area]
         )
         assert pan_exp - weights.expected_panchang_drift()[area] == pytest.approx(0.0, abs=1e-9), area
 

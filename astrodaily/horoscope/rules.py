@@ -4,7 +4,7 @@ ALL RULE TABLES IN THIS FILE ARE UNVERIFIED until checked against public-domain 
 sources (Brihat Parashara Hora Shastra, Phaladeepika, Brihat Samhita).
 """
 
-RULESET_VERSION = "0.1-unverified"
+RULESET_VERSION = "0.2-unverified"
 
 # UNVERIFIED: houses from natal Moon where transiting Moon is favourable (Chandra Bala).
 CHANDRA_BALA_GOOD_HOUSES: frozenset[int] = frozenset({1, 3, 6, 7, 10, 11})
@@ -57,7 +57,7 @@ INAUSPICIOUS_YOGAS: frozenset[str] = frozenset({
     "Parigha",
 })
 
-# UNVERIFIED: Traditional weekday rulers (Sunday-first).
+# UNVERIFIED: Traditional weekday rulers (Sunday-first) and activity tags.
 VARA_LORDS: dict[str, str] = {
     "Sunday": "Sun",
     "Monday": "Moon",
@@ -68,16 +68,106 @@ VARA_LORDS: dict[str, str] = {
     "Saturday": "Saturn",
 }
 
+VARA_SUITS: dict[str, tuple[str, ...]] = {
+    "Sunday": ("authority", "health", "government_matters"),
+    "Monday": ("travel", "creativity", "caring_for_others"),
+    "Tuesday": ("courage", "property", "avoid_conflict"),
+    "Wednesday": ("trade", "learning", "communication"),
+    "Thursday": ("teaching", "finance", "auspicious_starts"),
+    "Friday": ("arts", "relationships", "comfort"),
+    "Saturday": ("discipline", "service", "long_term_work"),
+}
+
+# UNVERIFIED: Classical muhurta nakshatra categories partitioning 1..27.
+# category_slug -> (display_name, kind, nakshatra_numbers, suits)
+NAKSHATRA_CATEGORIES: dict[str, tuple[str, str, frozenset[int], tuple[str, ...]]] = {
+    "dhruva": (
+        "Dhruva",
+        "favourable",
+        frozenset({4, 12, 21, 26}),
+        ("foundations", "long_term_commitments", "planting"),
+    ),
+    "chara": (
+        "Chara",
+        "favourable",
+        frozenset({7, 15, 22, 23, 24}),
+        ("travel", "vehicles", "movement"),
+    ),
+    "kshipra": (
+        "Kshipra",
+        "favourable",
+        frozenset({1, 8, 13}),
+        ("trade", "learning", "fresh_starts"),
+    ),
+    "mridu": (
+        "Mridu",
+        "favourable",
+        frozenset({5, 14, 17, 27}),
+        ("arts", "friendships", "gentle_work"),
+    ),
+    "ugra": (
+        "Ugra",
+        "unfavourable",
+        frozenset({2, 10, 11, 20, 25}),
+        ("decisive_tasks", "avoid_auspicious_starts"),
+    ),
+    "tikshna": (
+        "Tikshna",
+        "unfavourable",
+        frozenset({6, 9, 18, 19}),
+        ("investigation", "repair", "avoid_new_ventures"),
+    ),
+    "mishra": (
+        "Mishra",
+        "info",
+        frozenset({3, 16}),
+        ("mixed_routine", "discipline"),
+    ),
+}
+
+NAKSHATRA_CATEGORY_BY_NUM: dict[int, str] = {
+    num: slug
+    for slug, (_, _, nums, _) in NAKSHATRA_CATEGORIES.items()
+    for num in nums
+}
+
+# UNVERIFIED: Classical 5-fold tithi groups within a paksha (plus Amavasya = 30).
+# signal_id -> (display_name, kind, paksha_numbers, suits)
+# Nanda, Bhadra, Jaya, Purna are treated as mild favourable per muhurta tradition.
+TITHI_CATEGORIES: dict[str, tuple[str, str, frozenset[int], tuple[str, ...]]] = {
+    "tithi_nanda": ("Nanda", "favourable", frozenset({1, 6, 11}), ("celebrations", "joyful_beginnings")),
+    "tithi_bhadra": ("Bhadra", "favourable", frozenset({2, 7, 12}), ("health", "auspicious_acts")),
+    "tithi_jaya": ("Jaya", "favourable", frozenset({3, 8, 13}), ("competition", "victory")),
+    "rikta_tithi": ("Rikta", "unfavourable", frozenset({4, 9, 14}), ("completing_pending_work", "avoid_launches")),
+    "tithi_purna": ("Purna", "favourable", frozenset({5, 10, 15}), ("completion", "journeys")),
+}
+
+TITHI_SIGNAL_BY_PAKSHA_NUM: dict[int, str] = {
+    n: sig_id
+    for sig_id, (_, _, nums, _) in TITHI_CATEGORIES.items()
+    for n in nums
+}
+
+# UNVERIFIED: Special lunar-day informational signals (tithi 1..30 -> (signal_id, label, reason)).
+SPECIAL_TITHI_DAYS: dict[int, tuple[str, str, str]] = {
+    11: ("special_ekadashi", "Ekadashi", "Shukla Ekadashi is traditionally observed for mindful simplicity."),
+    26: ("special_ekadashi", "Ekadashi", "Krishna Ekadashi is traditionally observed for mindful simplicity."),
+    13: ("special_pradosh", "Pradosh", "Shukla Pradosh (Trayodashi) favours calm evening reflection."),
+    28: ("special_pradosh", "Pradosh", "Krishna Pradosh (Trayodashi) favours calm evening reflection."),
+    19: ("special_sankashti", "Sankashti Chaturthi", "Sankashti Chaturthi is traditionally kept for steady resolve."),
+    15: ("special_purnima", "Purnima", "Purnima marks full-moon culmination and sharing."),
+}
+
 # UNVERIFIED: Bounded natal-lord tone modifiers for running dasha themes.
 DASHA_DIGNITY_TONE: dict[str | None, float] = {
-    "exalted": 0.25,
-    "own": 0.15,
-    "debilitated": -0.25,
+    "exalted": 0.20,
+    "own": 0.10,
+    "debilitated": -0.20,
     None: 0.0,
 }
 
-# UNVERIFIED: Bounded natal-house tone modifiers for running dasha lords (whole-sign from lagna).
-DASHA_HOUSE_TONE: dict[int, float] = {
+# UNVERIFIED: Centred natal-house tone modifiers across houses 1..12 (sum == 0.0).
+_RAW_DASHA_HOUSE_TONE: dict[int, float] = {
     1: 0.15,
     2: 0.05,
     3: 0.0,
@@ -90,4 +180,8 @@ DASHA_HOUSE_TONE: dict[int, float] = {
     10: 0.15,
     11: 0.15,
     12: -0.15,
+}
+_DASHA_HOUSE_MEAN = sum(_RAW_DASHA_HOUSE_TONE.values()) / 12.0
+DASHA_HOUSE_TONE: dict[int, float] = {
+    h: v - _DASHA_HOUSE_MEAN for h, v in _RAW_DASHA_HOUSE_TONE.items()
 }

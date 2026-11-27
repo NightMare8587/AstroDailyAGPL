@@ -1,11 +1,11 @@
 """Unit tests for astrodaily.horoscope.rules and signals."""
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from astrodaily.calc.panchang import Element, Span
+from astrodaily.calc.panchang import Element, Span, compute_panchang
 from astrodaily.calc.transits import GrahaTransit, house_from
-from astrodaily.horoscope import rules
+from astrodaily.horoscope import build_day_report, rules
 from astrodaily.horoscope.signals import DayContext, NatalContext, evaluate_signals
 
 
@@ -211,3 +211,57 @@ def test_dasha_theme_reflects_natal_dignity_and_house():
     assert sum(good_dasha.weights.values()) > sum(hard_dasha.weights.values())
     assert all(-2.0 <= v <= 2.0 for v in good_dasha.weights.values())
     assert all(-2.0 <= v <= 2.0 for v in hard_dasha.weights.values())
+
+
+def test_nakshatra_and_tithi_tables_partition_exactly():
+    # Nakshatra categories partition 1..27 cleanly.
+    seen_nak: list[int] = []
+    for _, _, nums, _ in rules.NAKSHATRA_CATEGORIES.values():
+        seen_nak.extend(nums)
+    assert len(seen_nak) == 27
+    assert set(seen_nak) == set(range(1, 28))
+    assert set(rules.NAKSHATRA_CATEGORY_BY_NUM.keys()) == set(range(1, 28))
+
+    # Tithi categories cover 1..30 cleanly (1..29 via paksha number, 30 is Amavasya).
+    seen_paksha: list[int] = []
+    for _, _, nums, _ in rules.TITHI_CATEGORIES.values():
+        seen_paksha.extend(nums)
+    assert len(seen_paksha) == 15
+    assert set(seen_paksha) == set(range(1, 16))
+    for t in range(1, 30):
+        assert ((t - 1) % 15 + 1) in rules.TITHI_SIGNAL_BY_PAKSHA_NUM
+
+
+def test_special_days_fire_on_exact_tithis_only():
+    expected = {
+        11: "special_ekadashi",
+        13: "special_pradosh",
+        15: "special_purnima",
+        19: "special_sankashti",
+        26: "special_ekadashi",
+        28: "special_pradosh",
+    }
+    for tithi_num in range(1, 31):
+        ctx = DayContext(date(2025, 6, 10), _make_panchang(tithi_num=tithi_num), _make_transits())
+        sigs = evaluate_signals(ctx, None)
+        _assert_calm_reasons(sigs)
+        specials = [s.id for s in sigs if s.id.startswith("special_")]
+        if tithi_num in expected:
+            assert specials == [expected[tithi_num]]
+        else:
+            assert specials == [], (tithi_num, specials)
+
+
+def test_every_real_day_yields_one_nakshatra_one_tithi_and_vara_suits():
+    tithi_family_ids = set(rules.TITHI_CATEGORIES.keys()) | {"amavasya"}
+    for i in range(0, 365, 3):  # 122 real dates across 2025
+        day = date(2025, 1, 1) + timedelta(days=i)
+        rep = build_day_report(day, 28.6139, 77.2090, "Asia/Kolkata", None)
+        _assert_calm_reasons(rep.signals)
+        nak_sigs = [s for s in rep.signals if s.id.startswith("nakshatra_")]
+        tithi_sigs = [s for s in rep.signals if s.id in tithi_family_ids]
+        vara_sigs = [s for s in rep.signals if s.id.startswith("vara_")]
+        assert len(nak_sigs) == 1
+        assert len(tithi_sigs) == 1
+        assert len(vara_sigs) == 1 and len(vara_sigs[0].params["suits"]) > 0
+        assert all(s.scope == "daily" for s in nak_sigs + tithi_sigs + vara_sigs)

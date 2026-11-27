@@ -228,22 +228,67 @@ def _panchang_signals(day: DayContext) -> list[Signal]:
     tithi_num = int(tithi.number)
     paksha = tithi.extra.get("paksha", "shukla")
 
+    # Tithi category (complete partition of 1..30)
     if tithi_num == rules.AMAVASYA_TITHI_NUMBER:
         out.append(Signal(
             id="amavasya",
-            params={"tithi_number": tithi_num, "tithi_name": tithi.en},
+            params={"tithi_number": tithi_num, "tithi_name": tithi.en, "suits": ["quiet_review", "closure"]},
             weights=_weights_for("amavasya"),
             reason="Amavasya tithi favours quiet review and closure rather than major new starts.",
             kind="unfavourable",
         ))
-    elif (tithi_num % 15) in rules.RIKTA_PAKSHA_TITHIS:
+    else:
+        paksha_num = (tithi_num - 1) % 15 + 1
+        tithi_sig_id = rules.TITHI_SIGNAL_BY_PAKSHA_NUM[paksha_num]
+        cat_name, cat_kind, _, suits = rules.TITHI_CATEGORIES[tithi_sig_id]
+        if tithi_sig_id == "rikta_tithi":
+            reason = f"Rikta tithi ({tithi.en}) suggests completing existing work before launching new plans."
+        else:
+            reason = f"{cat_name} tithi ({tithi.en}) supports {', '.join(s.replace('_', ' ') for s in suits)}."
         out.append(Signal(
-            id="rikta_tithi",
-            params={"tithi_number": tithi_num, "tithi_name": tithi.en, "paksha": paksha},
-            weights=_weights_for("rikta_tithi"),
-            reason=f"Rikta tithi ({tithi.en}) suggests completing existing work before launching new plans.",
-            kind="unfavourable",
+            id=tithi_sig_id,
+            params={
+                "tithi_number": tithi_num,
+                "tithi_name": tithi.en,
+                "paksha": paksha,
+                "category": cat_name,
+                "suits": list(suits),
+            },
+            weights=_weights_for(tithi_sig_id),
+            reason=reason,
+            kind=cat_kind,  # type: ignore[arg-type]
         ))
+
+    # Special lunar days (info, zero weight)
+    if tithi_num in rules.SPECIAL_TITHI_DAYS:
+        sp_id, sp_label, sp_reason = rules.SPECIAL_TITHI_DAYS[tithi_num]
+        out.append(Signal(
+            id=sp_id,
+            params={"tithi_number": tithi_num, "label": sp_label},
+            weights=_weights_for("neutral"),
+            reason=sp_reason,
+            kind="info",
+        ))
+
+    # Nakshatra category (complete partition of 1..27)
+    nak = panchang["nakshatra"]
+    nak_num = int(nak.number)
+    nak_slug = rules.NAKSHATRA_CATEGORY_BY_NUM[nak_num]
+    nak_label, nak_kind, _, nak_suits = rules.NAKSHATRA_CATEGORIES[nak_slug]
+    nak_sig_id = f"nakshatra_{nak_slug}"
+    if nak_kind == "info":
+        nak_reason = f"{nak.en} is a Mishra (mixed) nakshatra: balance steady routine with careful pacing."
+    elif nak_kind == "favourable":
+        nak_reason = f"{nak.en} ({nak_label} nakshatra) favours {', '.join(s.replace('_', ' ') for s in nak_suits)}."
+    else:
+        nak_reason = f"{nak.en} ({nak_label} nakshatra) suits focused practical tasks rather than new starts."
+    out.append(Signal(
+        id=nak_sig_id,
+        params={"category": nak_label, "nakshatra": nak_num, "suits": list(nak_suits)},
+        weights=_weights_for(nak_sig_id) if nak_kind != "info" else _weights_for("neutral"),
+        reason=nak_reason,
+        kind=nak_kind,  # type: ignore[arg-type]
+    ))
 
     karana = panchang["karana"]
     if karana.en == rules.VISHTI_KARANA_EN:
@@ -267,9 +312,10 @@ def _panchang_signals(day: DayContext) -> list[Signal]:
 
     vara_en = panchang["vara"][0]
     lord = rules.VARA_LORDS[vara_en]
+    vara_suits = list(rules.VARA_SUITS[vara_en])
     out.append(Signal(
         id=f"vara_{vara_en.lower()}",
-        params={"vara": vara_en, "lord": lord},
+        params={"vara": vara_en, "lord": lord, "suits": vara_suits},
         weights=_weights_for("neutral"),
         reason=f"{vara_en} is ruled by {lord}.",
         kind="info",

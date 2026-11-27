@@ -72,11 +72,12 @@ def test_selection_caps_tie_break_and_freshness():
 
 
 def test_golden_days():
-    """Three fixed (profile, date) pairs with expected signal IDs derived independently."""
+    """Five fixed (profile, date) pairs with expected signal IDs derived independently."""
     # Golden Day 1: 2025-10-21 (Diwali Amavasya), Delhi, Level A (Moon in Leo = 5).
     # Verified with ndastro_engine (Lahiri, mean node) at sunrise 2025-10-21T00:56Z:
     # Sun=7(h3), Moon=6(h2), Mars=7(h3), Mercury=7(h3,dir), Jupiter=4(h12), Venus=6(h2),
-    # Saturn=12(h8 -> ashtama), Rahu=11(h7), Ketu=5(h1); Amavasya, Naga, Vishkambha, Tuesday.
+    # Saturn=12(h8 -> ashtama), Rahu=11(h7), Ketu=5(h1);
+    # Amavasya(30), Chitra(14 -> Mridu), Naga, Vishkambha, Tuesday.
     rep1 = build_day_report(date(2025, 10, 21), 28.6139, 77.2090, "Asia/Kolkata", NatalContext(moon_sign=5))
     assert rep1.level == "A"
     assert {s.id for s in rep1.signals} == {
@@ -91,6 +92,7 @@ def test_golden_days():
         "gochara_ketu_poor",
         "ashtama_shani",
         "amavasya",
+        "nakshatra_mridu",
         "vara_tuesday",
     }
 
@@ -98,7 +100,8 @@ def test_golden_days():
     # Natal: Moon=9 (Sagittarius), nak=21 (Uttara Ashadha), Lagna=4, Dasha=Rahu-Venus.
     # Transits at sunrise 2025-03-20T01:13Z: Sun=12(h4), Moon=8(h12), Mars=3(h7),
     # Mercury=12(h4,retro), Jupiter=2(h6), Venus=12(h4), Saturn=11(h3, enters 12 on Mar 29),
-    # Rahu=12(h4), Ketu=6(h10); nak=17 (count 24 -> tara 6 Sadhana); Shashthi, Vajra, Gara, Thu.
+    # Rahu=12(h4), Ketu=6(h10); nak=17 (Anuradha -> Mridu; count 24 -> tara 6 Sadhana);
+    # Tithi=21 (Krishna Shashthi -> Nanda), Vajra, Gara, Thursday.
     bm1 = resolve_birth_moment(date(1990, 5, 15), time(10, 0), "Asia/Kolkata", None)
     ch1 = compute_chart(bm1, 28.6139, 77.2090, as_of=datetime(2025, 3, 20, 6, 30, tzinfo=timezone.utc))
     natal1 = natal_from_chart(ch1, as_of=datetime(2025, 3, 20, 6, 30, tzinfo=timezone.utc))
@@ -116,6 +119,8 @@ def test_golden_days():
         "gochara_rahu_poor",
         "gochara_ketu_poor",
         "dasha_rahu_venus",
+        "tithi_nanda",
+        "nakshatra_mridu",
         "vara_thursday",
         "mercury_retrograde",
         "coming_up_saturn_ingress",
@@ -125,7 +130,8 @@ def test_golden_days():
     # Natal: Moon=2 (Taurus), nak=4 (Rohini), Lagna=7, Dasha=Saturn-Sun.
     # Transits at sunrise 2025-11-05T00:34Z: Sun=7(h6), Moon=1(h12), Mars=8(h7),
     # Mercury=8(h7,dir), Jupiter=4(h3), Venus=7(h6), Saturn=12(h11), Rahu=11(h10), Ketu=5(h4);
-    # nak=1 (count 25 -> tara 7 Naidhana); Purnima, Siddhi, Vishti (Bhadra), Wed.
+    # nak=1 (Ashwini -> Kshipra; count 25 -> tara 7 Naidhana);
+    # Tithi=15 (Purnima -> Purna + special_purnima), Siddhi, Vishti (Bhadra), Wednesday.
     bm2 = resolve_birth_moment(date(1972, 11, 22), time(5, 10), "Asia/Kolkata", None)
     ch2 = compute_chart(bm2, 13.0827, 80.2707, as_of=datetime(2025, 11, 5, 6, 30, tzinfo=timezone.utc))
     natal2 = natal_from_chart(ch2, as_of=datetime(2025, 11, 5, 6, 30, tzinfo=timezone.utc))
@@ -143,8 +149,60 @@ def test_golden_days():
         "gochara_rahu_good",
         "gochara_ketu_poor",
         "dasha_saturn_sun",
+        "tithi_purna",
+        "special_purnima",
+        "nakshatra_kshipra",
         "vishti_karana",
         "vara_wednesday",
+    }
+
+    # Golden Day 4 (Ekadashi): 2025-04-08, Delhi, Level A (Moon in Aries = 1).
+    # Verified with ndastro_engine at sunrise 2025-04-08T00:33Z: Sun=12(h12), Moon=4(h4), Mars=4(h4),
+    # Mercury=12(h12,dir), Jupiter=2(h2), Venus=12(h12), Saturn=12(h12 -> sade_sati_rising),
+    # Rahu=12(h12), Ketu=6(h6); Tithi=11 (Ekadashi -> Nanda + special_ekadashi),
+    # Nak=9 (Ashlesha -> Tikshna), Yoga=Shula (inauspicious), Karana=Vanija, Tuesday.
+    rep4 = build_day_report(date(2025, 4, 8), 28.6139, 77.2090, "Asia/Kolkata", NatalContext(moon_sign=1))
+    assert rep4.level == "A"
+    assert {s.id for s in rep4.signals} == {
+        "chandra_bala_poor",
+        "gochara_sun_poor",
+        "gochara_mars_poor",
+        "gochara_mercury_poor",
+        "gochara_jupiter_good",
+        "gochara_venus_good",
+        "gochara_saturn_poor",
+        "gochara_rahu_poor",
+        "gochara_ketu_good",
+        "sade_sati_rising",
+        "tithi_nanda",
+        "special_ekadashi",
+        "nakshatra_tikshna",
+        "inauspicious_yoga",
+        "vara_tuesday",
+    }
+
+    # Golden Day 5 (Pradosh): 2025-04-10, Delhi, Level A (Moon in Leo = 5).
+    # Verified with ndastro_engine at sunrise 2025-04-10T00:31Z: Sun=12(h8), Moon=5(h1), Mars=4(h12),
+    # Mercury=12(h8,dir), Jupiter=2(h10), Venus=12(h8), Saturn=12(h8 -> ashtama_shani),
+    # Rahu=12(h8), Ketu=6(h2); Tithi=13 (Trayodashi -> Jaya + special_pradosh),
+    # Nak=11 (Purva Phalguni -> Ugra), Yoga=Vriddhi, Karana=Kaulava, Thursday.
+    rep5 = build_day_report(date(2025, 4, 10), 28.6139, 77.2090, "Asia/Kolkata", NatalContext(moon_sign=5))
+    assert rep5.level == "A"
+    assert {s.id for s in rep5.signals} == {
+        "chandra_bala_good",
+        "gochara_sun_poor",
+        "gochara_mars_poor",
+        "gochara_mercury_good",
+        "gochara_jupiter_poor",
+        "gochara_venus_good",
+        "gochara_saturn_poor",
+        "gochara_rahu_poor",
+        "gochara_ketu_poor",
+        "ashtama_shani",
+        "tithi_jaya",
+        "special_pradosh",
+        "nakshatra_ugra",
+        "vara_thursday",
     }
 
 
