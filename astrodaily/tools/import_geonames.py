@@ -24,10 +24,12 @@ from sqlalchemy.engine import Engine
 from ..config import get_settings
 from ..db import normalize_database_url
 from ..models import Place, PlaceName
+from ..places.aliases import ALIASES
 from ..places.normalize import normalize
 
 BASE_URL = "https://download.geonames.org/export/dump/"
-MAX_NAMES_PER_PLACE = 12
+MAX_NAMES_PER_PLACE = 16
+MAX_HINDI_NAMES = 6
 BATCH = 5000
 
 
@@ -41,25 +43,32 @@ def load_admin_names(lines: Iterable[str], country: str) -> dict[str, str]:
     return out
 
 
-def load_hindi_names(lines: Iterable[str]) -> dict[int, str]:
-    """alternateNames: pick the preferred Hindi name per place, else the first one."""
-    best: dict[int, tuple[bool, str]] = {}
-    for row in csv.reader(lines, delimiter="\t", quoting=csv.QUOTE_NONE):
+def load_hindi_names(lines: Iterable[str]) -> dict[int, list[str]]:
+    """alternateNames: every Hindi name per place (historic ones skipped), the preferred one first.
+
+    All of them are searchable, because people type different spellings (Mumbai has three in GeoNames)."""
+    found: dict[int, list[tuple[bool, int, str]]] = {}
+    for n, row in enumerate(csv.reader(lines, delimiter="\t", quoting=csv.QUOTE_NONE)):
         if len(row) < 5 or row[2] != "hi" or not row[3] or row[7:8] == ["1"]:  # skip historic
             continue
         try:
             gid = int(row[1])
         except ValueError:
             continue
-        preferred = row[4] == "1"
-        if gid not in best or (preferred and not best[gid][0]):
-            best[gid] = (preferred, row[3])
-    return {gid: name for gid, (_, name) in best.items()}
+        found.setdefault(gid, []).append((row[4] != "1", n, row[3]))  # False sorts first: preferred, then file order
+    out: dict[int, list[str]] = {}
+    for gid, items in found.items():
+        names: list[str] = []
+        for _, _, name in sorted(items):
+            if name not in names:
+                names.append(name)
+        out[gid] = names[:MAX_HINDI_NAMES]
+    return out
 
 
 def parse_places(
     lines: Iterable[str], country: str, admin1: dict[str, str], admin2: dict[str, str],
-    hindi: dict[int, str],
+    hindi: dict[int, list[str]],
 ) -> Iterator[tuple[dict, list[str]]]:
     """Yield (place row, normalised search names) for populated places (feature class P)."""
     for row in csv.reader(lines, delimiter="\t", quoting=csv.QUOTE_NONE):
@@ -73,7 +82,11 @@ def parse_places(
             continue
         a1 = admin1.get(f"{country}.{row[10]}") if row[10] else None
         a2 = admin2.get(f"{country}.{row[10]}.{row[11]}") if row[10] and row[11] else None
-        name_hi = hindi.get(gid)
+        hi_names = list(hindi.get(gid, []))
+        alias = ALIASES.get(gid)
+        if alias and alias[0] == row[1]:  # applied only when the English name matches the expected one
+            hi_names = [*alias[1], *(n for n in hi_names if n not in alias[1])]
+        name_hi = hi_names[0] if hi_names else None
         place = {
             "id": gid, "name": row[1], "name_hi": name_hi, "state": a1, "district": a2,
             "country_code": country, "latitude": lat, "longitude": lon,
@@ -81,9 +94,7 @@ def parse_places(
         }
         # The Hindi name goes right after the primary names: big cities have hundreds of alternate names and the
         # per-place cap would otherwise cut the Hindi one off (Pune, Delhi and Mumbai were unsearchable in Hindi).
-        raw = [row[1], row[2]]
-        if name_hi:
-            raw.append(name_hi)
+        raw = [row[1], row[2], *hi_names]
         raw += row[3].split(",") if row[3] else []
         names: list[str] = []
         for n in raw:

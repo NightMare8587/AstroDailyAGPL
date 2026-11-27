@@ -44,7 +44,7 @@ def test_parsers():
     a2 = ig.load_admin_names(ADMIN2, "IN")
     assert a1 == {"IN.36": "Uttar Pradesh", "IN.07": "Delhi"}
     hindi = ig.load_hindi_names(ALT)
-    assert hindi == {1: "लखनउ"}  # preferred wins; historic and non-Hindi ignored
+    assert hindi == {1: ["लखनउ", "लखनऊ"]}  # all Hindi names, preferred first; historic and non-Hindi ignored
     out = list(ig.parse_places(GEONAMES_ROWS, "IN", a1, a2, hindi))
     assert [p["id"] for p, _ in out] == [1, 4, 5]  # river and Pakistan row skipped
     lucknow, names = out[0]
@@ -54,12 +54,12 @@ def test_parsers():
     assert names.count("lucknow") == 1  # name and ascii name are deduplicated
 
 
-def _write_data_dir(tmp_path, rows=GEONAMES_ROWS):
+def _write_data_dir(tmp_path, rows=GEONAMES_ROWS, alt=ALT):
     def make_zip(name, member, lines):
         with zipfile.ZipFile(tmp_path / name, "w") as z:
             z.writestr(member, "\n".join(lines) + "\n")
     make_zip("IN.zip", "IN.txt", rows)
-    make_zip("alternatenames_IN.zip", "IN.txt", ALT)
+    make_zip("alternatenames_IN.zip", "IN.txt", alt)
     (tmp_path / "admin1CodesASCII.txt").write_text("\n".join(ADMIN1) + "\n", encoding="utf-8")
     (tmp_path / "admin2Codes.txt").write_text("\n".join(ADMIN2) + "\n", encoding="utf-8")
     return tmp_path
@@ -255,7 +255,7 @@ def test_deleting_account_leaves_places_alone(seeded):
 def test_hindi_name_survives_the_name_cap_for_places_with_many_alternates():
     many = ",".join(f"Alias{i}" for i in range(40))
     rows = [row(7, "Pune", many, pop="3124458")]
-    out = list(ig.parse_places(rows, "IN", {}, {}, {7: "पुणे"}))
+    out = list(ig.parse_places(rows, "IN", {}, {}, {7: ["पुणे"]}))
     _, names = out[0]
     assert len(names) <= ig.MAX_NAMES_PER_PLACE
     assert "पुणे" in names and "pune" in names
@@ -280,3 +280,66 @@ def test_search_finds_a_hindi_name_stored_only_on_the_place(engine):
         assert [p.name for p in search_places(db, "pun")] == ["Pune", "Punaura"]  # English unchanged, biggest first
         assert search_places(db, "मुंबई") == []
         assert search_places(db, "प") == []  # still needs two characters
+
+
+# ---- spelling-tolerant Hindi matching ----
+
+@pytest.mark.parametrize("a,b", [
+    ("इन्दौर", "इंदौर"),            # nasal + virama = anusvara
+    ("मुम्बई", "मुंबई"),
+    ("तिरुवनन्तपुरम", "तिरुवनंतपुरम"),
+    ("गुड़गाँव", "गुड़गांव"),        # chandrabindu = anusvara
+    ("रांची", "राँची"),
+    ("गुड़गांव", "गुडगांव"),         # a keyboard that skips the nukta
+    ("लखनऊ", "लखनऊ"),
+])
+def test_equivalent_hindi_spellings_normalise_the_same(a, b):
+    assert normalize(a) == normalize(b)
+
+
+def test_hindi_normalisation_keeps_different_words_apart():
+    assert normalize("पुणे") != normalize("पुर")
+    assert normalize("दिल्ली") != normalize("दीपक")
+    assert normalize("कानपुर") != normalize("कोलकाता")
+    assert normalize("Rāvi") == "ravi"  # Latin handling unchanged
+
+
+def test_aliases_name_real_places_and_are_well_formed():
+    from astrodaily.places.aliases import ALIASES
+    assert len(ALIASES) >= 10
+    for gid, (english, hindi) in ALIASES.items():
+        assert gid > 0 and english and hindi
+        assert all(any("\u0900" <= ch <= "\u097f" for ch in h) for h in hindi), english
+        assert len(set(hindi)) == len(hindi), english
+
+
+def test_alias_is_applied_only_when_the_english_name_matches():
+    mumbai = list(ig.parse_places([row(1275339, "Mumbai", pop="12691836")], "IN", {}, {}, {1275339: ["बम्बई"]}))
+    place, names = mumbai[0]
+    assert place["name_hi"] == "मुंबई"                      # the modern spelling is the one shown
+    assert {normalize(x) for x in ("मुंबई", "बम्बई", "बॉम्बे")} <= set(names)  # every spelling is searchable
+    # same id but a different English name: nothing is applied, GeoNames' own Hindi name stays
+    other = list(ig.parse_places([row(1275339, "Somewhere Else")], "IN", {}, {}, {1275339: ["बम्बई"]}))
+    assert other[0][0]["name_hi"] == "बम्बई" and "मुंबई" not in other[0][1]
+
+
+def test_all_hindi_names_are_searchable_for_a_city_with_many_alternates(engine, tmp_path):
+    from sqlalchemy.orm import Session
+
+    from astrodaily.places.search import search_places
+    many = ",".join(f"Alias{i}" for i in range(40))
+    rows = [row(1275339, "Mumbai", many, pop="12691836"), row(1269743, "Indore", pop="1994397"),
+            row(1270642, "Gurugram", pop="886519"), row(9, "Muraina", pop="1000")]
+    alt = ["1\t1275339\thi\tबम्बई\t\t\t\t", "2\t1275339\thi\tमुम्बई\t\t\t\t", "3\t1275339\thi\tमुंबई\t\t\t\t",
+           "4\t1269743\thi\tइन्दौर\t\t\t\t", "5\t1270642\thi\tगुरुग्राम\t1\t\t\t"]
+    ig.import_country(engine, "IN", _write_data_dir(tmp_path, rows, alt))
+    with Session(engine) as db:
+        def find(q):
+            return [p.name for p in search_places(db, q)]
+        for q in ("मुंबई", "मुम्बई", "बम्बई", "बॉम्बे", "मुंब"):
+            assert find(q) == ["Mumbai"], q
+        assert find("इंदौर") == ["Indore"] and find("इन्दौर") == ["Indore"]       # either spelling
+        assert find("गुड़गांव") == ["Gurugram"] and find("गुड़गाँव") == ["Gurugram"]  # alias, both spellings
+        assert find("गुडगांव") == ["Gurugram"]                                        # no nukta
+        assert find("mum") == ["Mumbai"]                                              # English still works
+        assert db.scalar(select(Place.name_hi).where(Place.id == 1275339)) == "मुंबई"
