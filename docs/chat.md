@@ -1,4 +1,4 @@
-# AI chat (status: backend built 2026-11-27; not yet run against the real model)
+# AI chat (status: backend built 2026-11-27; run against the real model 2026-11-28)
 
 A calm guide that explains the person's day and chart in plain words. **The engine computes every astrological
 fact; the model only phrases and explains them.** No human astrologer.
@@ -36,6 +36,9 @@ fact; the model only phrases and explains them.** No human astrologer.
 - No memory across conversations, and no long-term summarising: only the last 12 messages go to the model.
 - The crisis check is keyword based and will miss some phrasings. It is a floor, not a clinical tool.
 - The tone check catches frightening words, not every kind of bad advice; the prompt carries the rest.
-- **Untested against the real model** until a Gemini key is set. Prompt quality needs a read-through of real
-  answers in both languages before launch.
+- **Run against real Gemini once** (13 questions, English and Hindi): answers stayed grounded in the engine's
+  times and score, declined medical, financial, gemstone, prompt-leak and off-topic requests, and never predicted
+  harm. That run found two problems, both fixed: the crisis check missed "ending my life" (patterns now cover
+  -ing and -ed forms and more Hindi phrasings), and the model once said "4 में से 4" for a score out of 5 (the
+  prompt now fixes the scale). A human should still read more answers in both languages before launch.
 - Token cost per message is stored but there is no budget dashboard or alert yet.

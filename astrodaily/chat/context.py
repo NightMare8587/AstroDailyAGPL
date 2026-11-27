@@ -44,7 +44,7 @@ def build_context(user: User, p: BirthProfile, day: date | None = None) -> str:
         f"birth star (nakshatra) {names.NAKSHATRA[natal.moon_nakshatra - 1][0]}; "
         f"ascendant (lagna) {zodiac.SIGNS[natal.lagna_sign - 1][0]}; "
         f"running period (Vimshottari dasha) {dasha.get('mahadasha', 'unknown')} / {dasha.get('antardasha', 'unknown')}.",
-        f"TODAY: day score {core['score']} out of 5. Areas: "
+        f"TODAY: day score {core['score']} out of 5 (1 = go easy, 5 = very supportive). Area scores, also out of 5: "
         + ", ".join(f"{a['name']['en']} {a['score']}" for a in core["areas"]) + ".",
         "Suits today: " + (" | ".join(s["reason"] for s in core["dos"]) or "nothing notable") + ".",
         "Go easy on: " + (" | ".join(s["reason"] for s in core["donts"]) or "nothing notable") + ".",

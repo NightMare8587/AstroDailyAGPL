@@ -91,7 +91,9 @@ def test_gemini_failures_become_llm_error(resp, exc):
 @pytest.mark.parametrize("text", [
     "I want to die", "i feel like i should kill myself", "thinking about suicide", "I want to end my life",
     "no reason to live anymore", "I might hurt myself", "मैं आत्महत्या करना चाहता हूँ", "मैं मरना चाहती हूँ",
-    "जान दे दूँगा",
+    "जान दे दूँगा", "I feel like ending my life", "I keep thinking about killing myself", "i am taking my own life tonight",
+    "I wish I was dead", "i don't want to be here anymore", "I'm hurting myself", "feeling like dying",
+    "there is no point in going on", "मैं जीना नहीं चाहती", "मुझे लगता है मैं मर जाऊँ", "ख़ुदकुशी के ख्याल आ रहे हैं",
 ])
 def test_crisis_messages_are_detected(text):
     assert safety.is_crisis(text)
@@ -99,7 +101,8 @@ def test_crisis_messages_are_detected(text):
 
 @pytest.mark.parametrize("text", [
     "Will I get the job this month?", "What suits today?", "kill time before my meeting", "मेरा करियर कैसा रहेगा?",
-    "Is Rahu Kaal bad for a meeting?",
+    "Is Rahu Kaal bad for a meeting?", "My boss will kill me if I am late", "Will this project kill my career?",
+    "I want to end the meeting early", "Is today good to end a relationship?", "Is it a good day to end my lease?",
 ])
 def test_ordinary_messages_are_not_crisis(text):
     assert not safety.is_crisis(text)
@@ -178,6 +181,7 @@ def test_context_has_derived_facts_and_no_personal_details(ready):
         user = db.scalar(select(User))
         p = user.profiles[0]
         ctx = build_context(user, p, date(2025, 11, 5))
+    assert "out of 5 (1 = go easy, 5 = very supportive)" in ctx
     for needle in ("Moon sign (rashi)", "birth star (nakshatra)", "ascendant (lagna)", "Vimshottari dasha",
                    "day score", "Suits today", "Panchang:", "2025-11-05", "Delhi"):
         assert needle in ctx, needle

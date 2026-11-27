@@ -6,11 +6,16 @@ from ..content.lint import BANNED_EN, BANNED_HI
 
 # Messages about self-harm or suicide never go to the model and never get an astrological answer.
 _CRISIS_EN = re.compile(
-    r"(suicid|kill (myself|me)|end (my|it all)|end my life|take my (own )?life|want to die|wanna die|"
-    r"don'?t want to (live|be alive)|self[- ]?harm|hurt myself|cut myself|better off dead|no reason to live)",
+    r"(suicid|kill(ing|ed)? myself|"
+    r"end(ing)? (my (own )?life|it all)|(take|taking|took) my (own )?life|"
+    r"(want|wanna|wish|going|plan(ning)?|thinking (of|about)|feel(ing)? like)( to)? (die|dying|be dead)|"
+    r"wish i (was|were) dead|(do ?n'?t|do not) want to (live|be alive|be here)|"
+    r"self[- ]?harm|(hurt|hurting|cut|cutting|harm|harming) myself|better off (dead|without me)|"
+    r"no (reason|point) (to|in) (live|living|go(ing)? on))",
     re.IGNORECASE)
-_CRISIS_HI = re.compile(r"(आत्महत्या|खुदकुशी|जान दे|जान ले|मर जाना चाहता|मर जाना चाहती|मरना चाहता|मरना चाहती|"
-                        r"जीना नहीं चाहता|जीना नहीं चाहती|खुद को (खत्म|नुकसान)|ज़िंदगी खत्म|जिंदगी खत्म)")
+_CRISIS_HI = re.compile(
+    r"(आत्म-?हत्या|ख़?ुदकुशी|जान (दे|ले)|मर जाऊँ|मर जाऊं|मर जाना|मरना चाहत|जीना नहीं चाहत|जीने की इच्छा नहीं|"
+    r"जिंदगी (खत्म|ख़त्म)|ज़िंदगी (खत्म|ख़त्म)|खुद को (खत्म|नुकसान|चोट))")
 
 CRISIS_REPLY = {
     "en": ("I'm really sorry you're feeling this way, and I'm glad you said it. You don't have to carry this alone. "
