@@ -5,7 +5,9 @@ horoscope, daily do/don't guidance with muhurat, home-screen widgets and notific
 an AI layer for personalised 1-to-1 guidance built from the user's birth details and
 computed chart data. There is no human astrologer in the loop.
 
-**Status:** planning. No code yet. See [docs/architecture.md](docs/architecture.md) and
+**Status:** backend scaffold. `GET /v1/panchang` works (tithi, nakshatra, yoga, karana, rahu kaal,
+gulika, yamaganda, abhijit, choghadiya; English and Hindi). Kundli, dashas, daily horoscope and AI
+chat are not built yet. See [docs/architecture.md](docs/architecture.md) and
 [docs/base-information.md](docs/base-information.md).
 
 ## Plan in one paragraph
@@ -15,6 +17,29 @@ Flutter app (Android and iOS) reads cached results through an API. A rule engine
 daily horoscope and do/don't from the chart, the running dasha, transits and the day's
 panchang. An LLM is used only for 1-to-1 chat, and only on top of already-computed data. It
 never calculates positions.
+
+## Run locally
+
+```
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+cp .env.example .env            # optional; defaults work
+.venv/bin/uvicorn astrodaily.main:app --reload
+.venv/bin/python -m pytest
+```
+
+Try: `GET /v1/panchang?date=2025-11-05&lat=28.6139&lon=77.209&tz=Asia/Kolkata` and `GET /health`.
+
+Settings come from environment variables (see `.env.example`). The Gemini model is
+`GEMINI_MODEL` (default `gemini-3.5-flash-lite`), so it can be changed on Railway without a
+code release. A `Dockerfile` is included for Railway.
+
+## Verification status
+
+Checked against published values: Lahiri ayanamsa at J2000, Makar Sankranti 2025, and the
+tithi and end times around Diwali and Kartik Purnima 2025 (Delhi). Rahu Kaal, Gulika and
+Yamaganda use the standard weekday segment tables. The choghadiya tables were written from
+memory of the published tables and are not yet checked against an independent source.
 
 ## Licence
 
