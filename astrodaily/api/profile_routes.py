@@ -185,12 +185,26 @@ class NotificationExport(BaseModel):
     devices: list[DeviceExport]
 
 
+class ChatMessageExport(BaseModel):
+    role: str
+    text: str
+    created_at: datetime
+
+
+class ChatExport(BaseModel):
+    id: str
+    title: str | None
+    created_at: datetime
+    messages: list[ChatMessageExport]
+
+
 class ExportOut(BaseModel):
     account: UserOut
     consented_at: datetime | None
     profiles: list[ProfileOut]
     horoscope_feedback: list[FeedbackExport] = []
     notifications: NotificationExport | None = None
+    chats: list[ChatExport] = []
 
 
 @export_router.get("/export", response_model=ExportOut)
@@ -201,7 +215,10 @@ def export_my_data(user: User = Depends(get_current_user)) -> ExportOut:
                      horoscope_feedback=[FeedbackExport(subject=f.subject, date=f.local_date, rating=f.rating,
                                                         felt_accurate=f.felt_accurate, created_at=f.created_at)
                                          for f in user.feedback],
-                     notifications=_notifications_export(user))
+                     notifications=_notifications_export(user),
+                     chats=[ChatExport(id=str(c.id), title=c.title, created_at=c.created_at,
+                                       messages=[ChatMessageExport(role=m.role, text=m.text, created_at=m.created_at)
+                                                 for m in c.messages]) for c in user.conversations])
 
 
 def _notifications_export(user: User) -> NotificationExport | None:

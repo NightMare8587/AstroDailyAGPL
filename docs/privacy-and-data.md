@@ -12,10 +12,10 @@ and not legal advice; a lawyer should review it and the policy text before real 
 | Language, consent version and time, home place | `users` | App behaviour, proof of consent |
 | Refresh tokens (SHA-256 hash only) | `refresh_tokens` | Sessions |
 | Horoscope feedback: card (Moon sign or profile), date, thumbs up or down, optional "felt accurate" | `horoscope_feedback` | Tuning the rules and content. Removed with the account, and with the profile when it was a profile's card. |
+| Chat messages (what you typed and the guide answered), per conversation, with the model used and token counts | `chat_conversations`, `chat_messages` | The AI chat's history, so a conversation can continue. Removed with the account, with the profile it was about, or when you delete the conversation. Included in the export. |
 | Birth profiles: label, birth date and time, birth place and its coordinates and timezone | `birth_profiles` | Charts and daily guidance. Up to 5 per user, so family charts are possible. |
 
-Daily cards are computed on request and not stored. Not stored: IP addresses (used in memory for rate limiting only), chat history (the AI chat is not
-built yet), any payment data. `POST /v1/kundli` calculates a chart without saving anything.
+Daily cards are computed on request and not stored. Not stored: IP addresses (used in memory for rate limiting only), any payment data. `POST /v1/kundli` calculates a chart without saving anything.
 
 ## Rules the code enforces
 
@@ -49,3 +49,16 @@ built yet), any payment data. `POST /v1/kundli` calculates a chart without savin
 - Automatic deletion of inactive accounts; an audit log of who accessed what.
 - Parental consent for minors, a grievance contact, breach-notification process.
 - Tying consent to a specific policy document (only a version string is stored).
+
+## AI chat and the model provider (Google Gemini)
+
+- **What leaves our server:** the person's typed message, the last 12 messages of that conversation, and a short
+  context of *derived* facts: Moon sign, birth star, ascendant, running dasha, today's day score and suggestions,
+  good and avoid times, panchang, and the city used for today's times. **Not sent:** name, email, birth date,
+  birth time, coordinates, or the profile label.
+- **Who processes it:** Google, through the Gemini API with our key. Use a **paid-tier** API key: Google's terms
+  for free-tier keys allow using content to improve its products, paid-tier terms do not. Confirm the current
+  terms before launch, and describe this processor in the privacy policy.
+- **Crisis messages** (self-harm, suicide) are answered with a fixed message and the Tele-MANAS helpline and are
+  never sent to the model.
+- **Open decision:** how long chat history is kept for inactive accounts (same question as profiles).

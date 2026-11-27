@@ -50,6 +50,9 @@ class User(Base):
     notification_prefs: Mapped["NotificationPrefs | None"] = relationship(
         back_populates="user", cascade="all, delete-orphan", uselist=False
     )
+    conversations: Mapped[list["ChatConversation"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", order_by="ChatConversation.updated_at.desc()"
+    )
 
 
 class RefreshToken(Base):
@@ -118,6 +121,9 @@ class BirthProfile(Base):
 
     user: Mapped[User] = relationship(back_populates="profiles")
     feedback: Mapped[list["HoroscopeFeedback"]] = relationship(
+        back_populates="profile", cascade="all, delete-orphan"
+    )
+    conversations: Mapped[list["ChatConversation"]] = relationship(
         back_populates="profile", cascade="all, delete-orphan"
     )
 
@@ -209,3 +215,40 @@ class NotificationLog(Base):
     attempts: Mapped[int] = mapped_column(SmallInteger, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ChatConversation(Base):
+    """A chat with the AI guide. Personal data: only its owner can read it, and it is removed with the
+    account or with the birth profile it was about."""
+    __tablename__ = "chat_conversations"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    profile_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("birth_profiles.id", ondelete="CASCADE"), nullable=True, index=True)
+    title: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="conversations")
+    profile: Mapped["BirthProfile | None"] = relationship(back_populates="conversations")
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="conversation", cascade="all, delete-orphan", order_by="ChatMessage.created_at, ChatMessage.id")
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("chat_conversations.id", ondelete="CASCADE"), index=True)
+    role: Mapped[str] = mapped_column(String(10))  # user or assistant
+    text: Mapped[str] = mapped_column(Text)
+    lang: Mapped[str] = mapped_column(String(2))
+    source: Mapped[str] = mapped_column(String(12), default="user")  # user, model, safety, fallback
+    model: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tokens_in: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_out: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    conversation: Mapped[ChatConversation] = relationship(back_populates="messages")

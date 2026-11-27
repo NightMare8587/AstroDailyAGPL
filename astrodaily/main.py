@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from . import __version__
 from .api.auth_routes import router as auth_router
+from .api.chat_routes import router as chat_router
 from .api.horoscope_routes import feedback_router, me_router as horoscope_me_router
 from .api.horoscope_routes import profile_router as horoscope_profile_router
 from .api.horoscope_routes import router as horoscope_router
@@ -23,6 +24,7 @@ app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(export_router)
 app.include_router(notification_router)
+app.include_router(chat_router)
 app.include_router(places_router)
 app.include_router(kundli_router)
 app.include_router(profile_router)

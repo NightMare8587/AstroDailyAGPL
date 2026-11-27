@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     # Longest a daily message may be late (cron down, restarts) before the day is skipped, in minutes.
     notify_max_late_minutes: int = 180
 
+    # AI chat. Cost and safety limits, all adjustable without a release.
+    chat_daily_message_limit: int = 30        # user messages per rolling 24 hours, per account
+    chat_max_message_chars: int = 1000
+    chat_history_messages: int = 12           # most recent messages sent to the model as history
+    chat_max_output_tokens: int = 600
+    chat_timeout_seconds: int = 30
+    chat_max_conversations: int = 50          # per account; the oldest are not auto-deleted, new ones are refused
+
     # Most birth profiles one account may keep (the user's own plus family).
     max_profiles_per_user: int = 5
 
@@ -43,6 +51,7 @@ class Settings(BaseSettings):
     rate_limit_panchang_per_minute: int = 60
     rate_limit_auth_per_minute: int = 10
     rate_limit_default_per_minute: int = 120
+    rate_limit_chat_per_minute: int = 10
     # Header holding the real client IP, set by the platform's proxy. Railway overwrites any value the
     # client sends in X-Real-IP, so it is safe to trust there. Default: x-real-ip in production, none locally.
     client_ip_header: str | None = None
