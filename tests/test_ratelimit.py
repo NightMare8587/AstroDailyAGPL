@@ -64,24 +64,34 @@ def _request(headers: dict, host="10.0.0.1") -> Request:
     return Request(scope)
 
 
-def test_client_ip_ignores_forwarded_header_without_proxy():
+def test_client_ip_ignores_forwarding_headers_locally():
     s = Settings(app_env="local")
-    assert ratelimit.client_ip(_request({"x-forwarded-for": "6.6.6.6"}), s) == "10.0.0.1"
+    assert s.ip_header() is None
+    assert ratelimit.client_ip(_request({"x-real-ip": "6.6.6.6", "x-forwarded-for": "6.6.6.6"}), s) == "10.0.0.1"
 
 
-def test_client_ip_uses_proxy_appended_entry_in_production():
+def test_client_ip_uses_real_ip_header_in_production():
     s = Settings(app_env="production")
-    assert s.proxy_hops() == 1
-    # A client forging "6.6.6.6" cannot change the last entry, which the proxy added.
-    assert ratelimit.client_ip(_request({"x-forwarded-for": "6.6.6.6, 203.0.113.7"}), s) == "203.0.113.7"
+    assert s.ip_header() == "x-real-ip"
+    assert ratelimit.client_ip(_request({"x-real-ip": "203.0.113.7"}), s) == "203.0.113.7"
+    # Railway-style: X-Forwarded-For is not used, and a missing header falls back to the socket.
+    assert ratelimit.client_ip(_request({"x-forwarded-for": "6.6.6.6, 1.1.1.1"}), s) == "10.0.0.1"
     assert ratelimit.client_ip(_request({}), s) == "10.0.0.1"
 
 
-def test_forged_forwarded_header_does_not_dodge_limit(monkeypatch, small_limits):
+def test_header_is_configurable():
+    s = Settings(app_env="production", client_ip_header="CF-Connecting-IP")
+    assert ratelimit.client_ip(_request({"cf-connecting-ip": "198.51.100.9"}), s) == "198.51.100.9"
+    assert Settings(app_env="production", client_ip_header="").ip_header() is None
+
+
+def test_same_real_ip_shares_a_limit_in_production(monkeypatch, small_limits):
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("JWT_SECRET", "x" * 40)
     get_settings.cache_clear()
     with TestClient(app) as c:
-        codes = [c.get("/v1/panchang", params=PARAMS,
-                       headers={"x-forwarded-for": f"6.6.6.{i}, 203.0.113.7"}).status_code for i in range(5)]
-    assert codes[:3] == [200, 200, 200] and codes[3:] == [429, 429]
+        codes = [c.get("/v1/panchang", params=PARAMS, headers={"x-real-ip": "203.0.113.7"}).status_code
+                 for _ in range(5)]
+        other = c.get("/v1/panchang", params=PARAMS, headers={"x-real-ip": "203.0.113.8"}).status_code
+    assert codes == [200, 200, 200, 429, 429]
+    assert other == 200

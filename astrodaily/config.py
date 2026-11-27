@@ -31,13 +31,14 @@ class Settings(BaseSettings):
     rate_limit_panchang_per_minute: int = 60
     rate_limit_auth_per_minute: int = 10
     rate_limit_default_per_minute: int = 120
-    # How many reverse proxies sit in front of the app (Railway = 1). Default: 1 in production, else 0.
-    trusted_proxy_hops: int | None = None
+    # Header holding the real client IP, set by the platform's proxy. Railway overwrites any value the
+    # client sends in X-Real-IP, so it is safe to trust there. Default: x-real-ip in production, none locally.
+    client_ip_header: str | None = None
 
-    def proxy_hops(self) -> int:
-        if self.trusted_proxy_hops is not None:
-            return self.trusted_proxy_hops
-        return 1 if self.app_env == "production" else 0
+    def ip_header(self) -> str | None:
+        if self.client_ip_header is not None:
+            return self.client_ip_header.strip().lower() or None
+        return "x-real-ip" if self.app_env == "production" else None
 
     @property
     def google_client_id_list(self) -> list[str]:

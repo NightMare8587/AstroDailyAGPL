@@ -62,8 +62,9 @@ login; caching them is a later optimisation.
 
 Per client IP, sliding one-minute window, in memory: `/v1/panchang` 60, `/v1/auth/*` 10, `/v1/me` 120
 requests a minute (`RATE_LIMIT_*` variables; `/health` is not limited). Over the limit the API
-returns `429` with a `Retry-After` header. Behind Railway's proxy the client IP is the last
-`X-Forwarded-For` entry (`TRUSTED_PROXY_HOPS`, default 1 in production). Counters are per process:
+returns `429` with a `Retry-After` header. In production the client IP is the `X-Real-IP` header, which
+Railway overwrites at its edge (checked live: forged `X-Real-IP` and `X-Forwarded-For` values are
+replaced), configurable with `CLIENT_IP_HEADER`; locally it is the socket address. Counters are per process:
 with more than one replica, move them to Redis. Panchang dates are limited to 1800-2200.
 
 ## Verification status

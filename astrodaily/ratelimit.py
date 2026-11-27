@@ -23,14 +23,14 @@ def reset() -> None:
 
 
 def client_ip(request: Request, settings: Settings) -> str:
-    """The caller's IP. Behind Railway's proxy the last X-Forwarded-For entry is the one the
-    proxy itself appended, so it cannot be forged by the client; earlier entries can."""
-    hops = settings.proxy_hops()
-    forwarded = request.headers.get("x-forwarded-for")
-    if hops and forwarded:
-        parts = [p.strip() for p in forwarded.split(",") if p.strip()]
-        if len(parts) >= hops:
-            return parts[-hops]
+    """The caller's IP. In production we trust one header set by the platform proxy (Railway
+    overwrites X-Real-IP, so clients cannot forge it). Elsewhere we use the socket address; never
+    trust forwarding headers without a proxy in front, because any client could set them."""
+    header = settings.ip_header()
+    if header:
+        value = request.headers.get(header)
+        if value:
+            return value.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
 
