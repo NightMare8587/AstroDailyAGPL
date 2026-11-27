@@ -127,7 +127,7 @@ def test_saturn_cycles_all_12_signs():
         12: "sade_sati_rising",
         1: "sade_sati_peak",
         2: "sade_sati_setting",
-        4: "kantaka_shani",
+        4: "ardhashtama_shani",
         8: "ashtama_shani",
     }
     for sat_sign in range(1, 13):
@@ -265,3 +265,13 @@ def test_every_real_day_yields_one_nakshatra_one_tithi_and_vara_suits():
         assert len(tithi_sigs) == 1
         assert len(vara_sigs) == 1 and len(vara_sigs[0].params["suits"]) > 0
         assert all(s.scope == "daily" for s in nak_sigs + tithi_sigs + vara_sigs)
+
+
+def test_inauspicious_yoga_table_uses_real_yoga_names_and_the_nine_yoga_convention():
+    from astrodaily.calc import names
+    from astrodaily.horoscope import rules
+    assert rules.INAUSPICIOUS_YOGAS == {"Vishkambha", "Atiganda", "Shula", "Ganda", "Vyaghata", "Vajra",
+                                        "Vyatipata", "Parigha", "Vaidhriti"}
+    real = {en for en, _ in names.YOGA}
+    assert rules.INAUSPICIOUS_YOGAS <= real, rules.INAUSPICIOUS_YOGAS - real   # a typo would never fire
+    assert len(real) == 27 and len(rules.INAUSPICIOUS_YOGAS) == 9

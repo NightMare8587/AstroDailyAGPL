@@ -164,7 +164,7 @@ def _saturn_cycle_signals(day: DayContext, natal: NatalContext) -> list[Signal]:
         "peak": ("sade_sati_peak", "Sade Sati peak phase (Saturn over natal Moon): steady discipline over haste."),
         "setting": ("sade_sati_setting", "Sade Sati setting phase (Saturn in 2nd from Moon): consolidating commitments."),
         "ashtama": ("ashtama_shani", "Ashtama Shani (Saturn in 8th from Moon): patience and careful preparation."),
-        "kantaka": ("kantaka_shani", "Kantaka Shani (Saturn in 4th from Moon): balancing home and work responsibilities."),
+        "ardhashtama": ("ardhashtama_shani", "Ardhashtama Shani (Saturn in 4th from Moon, often called Dhaiya): balancing home and work responsibilities."),
     }
     sig_id, reason = id_map[state]
     return [Signal(

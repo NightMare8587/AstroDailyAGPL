@@ -32,7 +32,7 @@ SATURN_CYCLE_KEYS: tuple[str, ...] = (
     "sade_sati_peak",
     "sade_sati_setting",
     "ashtama_shani",
-    "kantaka_shani",
+    "ardhashtama_shani",
 )
 PANCHANG_FREQUENCIES: dict[str, float] = {
     "vishti_karana": 8.0 / 60.0,
@@ -151,7 +151,7 @@ WEIGHTS: dict[str, dict[str, float]] = {
     "sade_sati_peak": {"career": -0.20, "money": -0.15, "relationships": -0.15, "health": -0.25, "mind": -0.30},
     "sade_sati_setting": {"career": -0.15, "money": -0.20, "relationships": -0.15, "health": -0.10, "mind": -0.15},
     "ashtama_shani": {"career": -0.25, "money": -0.15, "relationships": -0.15, "health": -0.25, "mind": -0.25},
-    "kantaka_shani": {"career": -0.20, "money": -0.10, "relationships": -0.20, "health": -0.10, "mind": -0.20},
+    "ardhashtama_shani": {"career": -0.20, "money": -0.10, "relationships": -0.20, "health": -0.10, "mind": -0.20},
 
     # Dasha base is zero so Level B centres around 3.0; only bounded dignity + centred house tone shift it.
     "dasha_base": {"career": 0.0, "money": 0.0, "relationships": 0.0, "health": 0.0, "mind": 0.0},

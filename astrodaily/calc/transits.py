@@ -22,7 +22,7 @@ GRAHAS: tuple[tuple[str, int], ...] = (
 _BODY_BY_KEY: dict[str, int] = dict(GRAHAS)
 ALL_GRAHAS: tuple[str, ...] = tuple(k for k, _ in GRAHAS) + ("Rahu", "Ketu")
 
-SaturnState = Literal["rising", "peak", "setting", "ashtama", "kantaka"]
+SaturnState = Literal["rising", "peak", "setting", "ashtama", "ardhashtama"]
 
 
 @dataclass(frozen=True)
@@ -128,5 +128,5 @@ def sade_sati_state(natal_moon_sign: int, saturn_sign: int) -> SaturnState | Non
         1: "peak",
         2: "setting",
         8: "ashtama",
-        4: "kantaka",
+        4: "ardhashtama",
     }.get(house)

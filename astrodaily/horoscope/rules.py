@@ -1,10 +1,16 @@
-"""Classical Jyotish rule tables for daily horoscope signals.
+"""Jyotish rule tables for daily horoscope signals.
 
-ALL RULE TABLES IN THIS FILE ARE UNVERIFIED until checked against public-domain Sanskrit
-sources (Brihat Parashara Hora Shastra, Phaladeepika, Brihat Samhita).
+STATUS: none of these tables has been checked against a readable primary text. A research pass on
+2026-11-27 (see docs/rules-review-checklist.md) could not read the one public-domain primary edition it
+found (a 1925 Muhurta Chintamani scan with unusable OCR), so every table below is a COMMON
+CONVENTION, as found in secondary sources, and not a verified classical rule. Each table says what is
+known about its variants. A person who knows Jyotish must review them before real users see a card.
+
+The weights are the app's own design, and the dasha tone tables and the activity tags
+(``VARA_SUITS``, the ``suits`` lists) are editorial guidance, not classical rules.
 """
 
-RULESET_VERSION = "0.2-unverified"
+RULESET_VERSION = "0.3-unverified"
 
 # UNVERIFIED: houses from natal Moon where transiting Moon is favourable (Chandra Bala).
 CHANDRA_BALA_GOOD_HOUSES: frozenset[int] = frozenset({1, 3, 6, 7, 10, 11})
@@ -23,8 +29,10 @@ TARA_TABLE: dict[int, tuple[str, str, str]] = {
     9: ("parama_mitra", "Parama Mitra", "favourable"),
 }
 
-# UNVERIFIED: Gochara favourable houses counted from the natal Moon sign.
-# Note: Rahu and Ketu rows are especially uncertain across Jyotish texts.
+# UNVERIFIED (common convention for the seven visible planets, medium confidence; Rahu and Ketu low):
+# Gochara favourable houses counted from the natal Moon sign. This is the table WITHOUT vedha
+# (obstruction) rules, which a full traditional judgement also applies, so "favourable" here is a
+# simplification. Rahu and Ketu sets vary between presentations.
 GOCHARA_FAVOURABLE_HOUSES: dict[str, frozenset[int]] = {
     "Sun": frozenset({3, 6, 10, 11}),
     "Moon": frozenset({1, 3, 6, 7, 10, 11}),
@@ -46,18 +54,23 @@ RIKTA_PAKSHA_TITHIS: frozenset[int] = frozenset({4, 9, 14})
 AMAVASYA_TITHI_NUMBER: int = 30
 VISHTI_KARANA_EN: str = "Vishti (Bhadra)"
 
-# UNVERIFIED: Nitya yogas conventionally treated as challenging for new beginnings.
+# UNVERIFIED (common panchang convention, medium confidence): the nine nitya yogas usually avoided for
+# new beginnings. An earlier version listed only seven and left out Vishkambha and Vajra. Some sources
+# treat Vishkambha and Parigha as inauspicious only for part of their span.
 INAUSPICIOUS_YOGAS: frozenset[str] = frozenset({
-    "Vyatipata",
-    "Vaidhriti",
+    "Vishkambha",
     "Atiganda",
     "Shula",
     "Ganda",
     "Vyaghata",
+    "Vajra",
+    "Vyatipata",
     "Parigha",
+    "Vaidhriti",
 })
 
-# UNVERIFIED: Traditional weekday rulers (Sunday-first) and activity tags.
+# Weekday rulers (the standard seven-day planetary order). The activity tags in VARA_SUITS are the app's
+# own editorial guidance, not quotations from any text.
 VARA_LORDS: dict[str, str] = {
     "Sunday": "Sun",
     "Monday": "Moon",

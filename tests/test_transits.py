@@ -115,7 +115,7 @@ def test_sade_sati_state_all_twelve_saturn_signs():
         12: "rising",
         1: "peak",
         2: "setting",
-        4: "kantaka",
+        4: "ardhashtama",
         8: "ashtama",
     }
     for saturn_sign in range(1, 13):
