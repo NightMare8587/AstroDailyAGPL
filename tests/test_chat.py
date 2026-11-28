@@ -236,6 +236,11 @@ def test_context_without_a_birth_time_has_no_chart_facts(api):
     assert "CHART (derived" not in ctx and "PARTNERSHIP:" not in ctx and "birth time unknown" in ctx
 
 
+def test_the_prompt_asks_for_named_texts_not_a_standard_rule():
+    from astrodaily.chat.prompt import system_prompt
+    assert '"standard"' in system_prompt("en", "CTX") and "name the text" in system_prompt("en", "CTX")
+
+
 # ---------------------------------------------------------------- access rules
 
 def test_requires_login_and_consent(api):
