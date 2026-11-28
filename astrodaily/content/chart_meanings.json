@@ -1,0 +1,365 @@
+{
+ "_note": "DRAFT. Written by the model, not yet checked by a Jyotish reviewer. A reviewer edits the wording here and sets each group's status to reviewed. Text for a planet is built from: planets (what it stands for) + planet_role (its themes in a few words) + sign_style (how it works in a sign) + house_area (what a house covers), unless sign_overrides has a hand-written line for that body and sign.",
+ "status": {
+  "planets": "draft",
+  "sign_style": "draft",
+  "house_area": "draft",
+  "sign_overrides": "draft",
+  "lagna": "draft",
+  "planet_role": "draft"
+ },
+ "planets": {
+  "Sun": {
+   "en": "In Vedic astrology the Sun is the soul (atma). It shows your core self: confidence, vitality, purpose, and how you deal with authority and with father figures.",
+   "hi": "वैदिक ज्योतिष में सूर्य आत्मा है। यह आपका मूल स्वभाव दिखाता है: आत्मविश्वास, ऊर्जा, उद्देश्य, और अधिकारियों व पिता समान लोगों के साथ आपका व्यवहार।"
+  },
+  "Moon": {
+   "en": "The Moon is the mind. It shows how you feel and react, what makes you feel safe, and your bond with your mother. Its sign is your Moon sign (rashi), the one used for daily predictions and for the dasha periods.",
+   "hi": "चंद्रमा मन है। यह दिखाता है कि आप कैसा महसूस करते हैं और कैसे प्रतिक्रिया देते हैं, किस बात से सुरक्षित लगता है, और माँ से आपका जुड़ाव। इसकी राशि आपकी चंद्र राशि है, जिससे दैनिक फल और दशा देखी जाती है।"
+  },
+  "Mars": {
+   "en": "Mars is energy and courage. It shows how you take action, handle conflict and push through effort, and it relates to siblings and property.",
+   "hi": "मंगल ऊर्जा और साहस है। यह दिखाता है कि आप कैसे कदम उठाते हैं, टकराव को कैसे संभालते हैं और मेहनत कैसे करते हैं; यह भाई-बहन और संपत्ति से भी जुड़ा है।"
+  },
+  "Mercury": {
+   "en": "Mercury is the intellect. It shows how you think, speak, learn and trade, and how quickly you pick things up.",
+   "hi": "बुध बुद्धि है। यह दिखाता है कि आप कैसे सोचते, बोलते, सीखते और लेन-देन करते हैं, और बातें कितनी जल्दी समझते हैं।"
+  },
+  "Jupiter": {
+   "en": "Jupiter is wisdom and growth. It shows where you find guidance, luck and generosity, and it relates to teachers, learning and family values.",
+   "hi": "गुरु ज्ञान और विकास है। यह दिखाता है कि आपको मार्गदर्शन, सौभाग्य और उदारता कहाँ मिलती है; यह गुरु, शिक्षा और पारिवारिक मूल्यों से जुड़ा है।"
+  },
+  "Venus": {
+   "en": "Venus is love and comfort. It shows how you relate to others, what you find beautiful, and your approach to pleasure, art and money.",
+   "hi": "शुक्र प्रेम और सुख है। यह दिखाता है कि आप दूसरों से कैसे जुड़ते हैं, आपको क्या सुंदर लगता है, और सुख, कला व धन के प्रति आपका नज़रिया।"
+  },
+  "Saturn": {
+   "en": "Saturn is discipline and time. It shows where you work hard and slowly, learn patience and build things that last.",
+   "hi": "शनि अनुशासन और समय है। यह दिखाता है कि आप कहाँ धीरे-धीरे और कड़ी मेहनत करते हैं, धैर्य सीखते हैं और टिकाऊ चीज़ें बनाते हैं।"
+  },
+  "Rahu": {
+   "en": "Rahu is ambition and the pull of the new. It shows where you reach beyond the familiar and where you may feel restless or hungry for more. It is a shadow point (a lunar node), not a physical planet.",
+   "hi": "राहु महत्वाकांक्षा और नएपन का खिंचाव है। यह दिखाता है कि आप कहाँ जाने-पहचाने से आगे बढ़ना चाहते हैं और कहाँ बेचैनी या और पाने की चाह रहती है। यह एक छाया बिंदु (चंद्र पात) है, भौतिक ग्रह नहीं।"
+  },
+  "Ketu": {
+   "en": "Ketu is detachment and inner insight. It shows where you need less, let go easily or turn inward. It is a shadow point (a lunar node), not a physical planet.",
+   "hi": "केतु वैराग्य और भीतरी समझ है। यह दिखाता है कि आपको कहाँ कम की ज़रूरत है, कहाँ छोड़ना आसान है या मन भीतर मुड़ता है। यह एक छाया बिंदु (चंद्र पात) है, भौतिक ग्रह नहीं।"
+  }
+ },
+ "lagna": {
+  "en": "The Lagna (ascendant) is the sign that was rising on the eastern horizon at the moment you were born. It shows your body, your first impression and your approach to life, and it is the starting point of the twelve houses.",
+  "hi": "लग्न वह राशि है जो आपके जन्म के क्षण पूर्वी क्षितिज पर उदय हो रही थी। यह आपका शरीर, पहला प्रभाव और जीवन के प्रति दृष्टिकोण दिखाता है, और बारह भावों की शुरुआत यहीं से होती है।"
+ },
+ "templates": {
+  "in_sign": {
+   "en": "In {sign}, the themes of {role} work {style}.",
+   "hi": "{sign} में {role} के विषय {style} काम करते हैं।"
+  },
+  "in_house": {
+   "en": "In house {n}, the themes of {role} work through {area}.",
+   "hi": "{ordinal} भाव में {role} के विषय {area} के माध्यम से काम करते हैं।"
+  }
+ },
+ "sign_style": [
+  {
+   "en": "boldly and directly, quick to start",
+   "hi": "साहस और सीधेपन से, शुरुआत करने में तेज़"
+  },
+  {
+   "en": "steadily and practically, valuing comfort and security",
+   "hi": "स्थिरता और व्यावहारिकता से, सुख और सुरक्षा को महत्व देते हुए"
+  },
+  {
+   "en": "curiously and quickly, through talking, learning and variety",
+   "hi": "जिज्ञासा और तेज़ी से, बातचीत, सीखने और विविधता के ज़रिए"
+  },
+  {
+   "en": "with care and feeling, tied to home and family",
+   "hi": "देखभाल और भावना से, घर और परिवार से जुड़कर"
+  },
+  {
+   "en": "warmly and proudly, wanting to be seen and to lead",
+   "hi": "गर्मजोशी और स्वाभिमान से, आगे आने और नेतृत्व करने की चाह के साथ"
+  },
+  {
+   "en": "carefully and analytically, improving things through detail",
+   "hi": "सावधानी और विश्लेषण से, बारीकी के ज़रिए चीज़ें बेहतर करते हुए"
+  },
+  {
+   "en": "fairly and sociably, looking for balance and partnership",
+   "hi": "न्याय और मिलनसारी से, संतुलन और साझेदारी की तलाश में"
+  },
+  {
+   "en": "intensely and privately, looking beneath the surface",
+   "hi": "तीव्रता और गोपनीयता से, सतह के नीचे झाँकते हुए"
+  },
+  {
+   "en": "hopefully and openly, drawn to learning, travel and meaning",
+   "hi": "आशा और खुलेपन से, सीखने, यात्रा और अर्थ की ओर खिंचते हुए"
+  },
+  {
+   "en": "with discipline and patience, aiming at long goals",
+   "hi": "अनुशासन और धैर्य से, लंबे लक्ष्यों की ओर"
+  },
+  {
+   "en": "independently and idealistically, thinking of groups and the future",
+   "hi": "स्वतंत्रता और आदर्शवाद से, समूह और भविष्य के बारे में सोचते हुए"
+  },
+  {
+   "en": "gently and intuitively, drawn to compassion and the inner life",
+   "hi": "कोमलता और सहज-बोध से, करुणा और भीतरी जीवन की ओर खिंचते हुए"
+  }
+ ],
+ "house_area": [
+  {
+   "en": "your body, personality and first impression",
+   "hi": "आपके शरीर, व्यक्तित्व और पहले प्रभाव",
+   "ordinal_hi": "पहले"
+  },
+  {
+   "en": "money, family and speech",
+   "hi": "धन, परिवार और वाणी",
+   "ordinal_hi": "दूसरे"
+  },
+  {
+   "en": "courage, effort, siblings and communication",
+   "hi": "साहस, प्रयास, भाई-बहन और संवाद",
+   "ordinal_hi": "तीसरे"
+  },
+  {
+   "en": "home, mother, property and inner peace",
+   "hi": "घर, माँ, संपत्ति और मन की शांति",
+   "ordinal_hi": "चौथे"
+  },
+  {
+   "en": "creativity, children, learning and romance",
+   "hi": "रचनात्मकता, संतान, विद्या और प्रेम",
+   "ordinal_hi": "पाँचवें"
+  },
+  {
+   "en": "daily work, health habits, service and obstacles",
+   "hi": "रोज़ के काम, स्वास्थ्य की आदतें, सेवा और बाधाएँ",
+   "ordinal_hi": "छठे"
+  },
+  {
+   "en": "partnerships, marriage and close dealings with others",
+   "hi": "साझेदारी, विवाह और दूसरों से निकट व्यवहार",
+   "ordinal_hi": "सातवें"
+  },
+  {
+   "en": "change, shared resources, research and the hidden side of things",
+   "hi": "बदलाव, साझा संसाधन, शोध और चीज़ों का छिपा पक्ष",
+   "ordinal_hi": "आठवें"
+  },
+  {
+   "en": "luck, beliefs, teachers, higher learning and long journeys",
+   "hi": "भाग्य, आस्था, गुरु, उच्च शिक्षा और लंबी यात्राएँ",
+   "ordinal_hi": "नौवें"
+  },
+  {
+   "en": "career, status and your public role",
+   "hi": "करियर, प्रतिष्ठा और आपकी सार्वजनिक भूमिका",
+   "ordinal_hi": "दसवें"
+  },
+  {
+   "en": "gains, friends, networks and fulfilment of wishes",
+   "hi": "लाभ, मित्र, संपर्क और इच्छाओं की पूर्ति",
+   "ordinal_hi": "ग्यारहवें"
+  },
+  {
+   "en": "rest, solitude, spending, foreign places and letting go",
+   "hi": "विश्राम, एकांत, खर्च, विदेश और छोड़ना",
+   "ordinal_hi": "बारहवें"
+  }
+ ],
+ "sign_overrides": {
+  "Sun": [
+   {
+    "en": "Bold, direct and quick to start. You lead by acting first. Impatience is the thing to watch.",
+    "hi": "साहसी, सीधे और शुरुआत करने में तेज। आप पहले कदम उठाकर नेतृत्व करते हैं। जल्दबाज़ी पर ध्यान रखें।"
+   },
+   {
+    "en": "Steady, practical and loyal. You build slowly and value comfort and security.",
+    "hi": "स्थिर, व्यावहारिक और वफ़ादार। आप धीरे-धीरे निर्माण करते हैं और सुख व सुरक्षा को महत्व देते हैं।"
+   },
+   {
+    "en": "Curious, quick and talkative. You learn by exchanging ideas and like variety.",
+    "hi": "जिज्ञासु, तेज़ और बातूनी। आप विचारों के आदान-प्रदान से सीखते हैं और विविधता पसंद करते हैं।"
+   },
+   {
+    "en": "Caring and protective. Your sense of self is tied to family, home and feelings.",
+    "hi": "देखभाल करने वाले और रक्षक। आपकी पहचान परिवार, घर और भावनाओं से जुड़ी होती है।"
+   },
+   {
+    "en": "Warm, proud and generous. You want to be seen and you lead with heart.",
+    "hi": "गर्मजोशी वाले, स्वाभिमानी और उदार। आप चाहते हैं कि आपको देखा जाए और आप दिल से नेतृत्व करते हैं।"
+   },
+   {
+    "en": "Careful, analytical and helpful. You improve things through detail and service.",
+    "hi": "सावधान, विश्लेषण करने वाले और मददगार। आप बारीकी और सेवा से चीज़ें बेहतर बनाते हैं।"
+   },
+   {
+    "en": "Fair-minded and sociable. You look for balance and do well in partnerships.",
+    "hi": "न्यायप्रिय और मिलनसार। आप संतुलन चाहते हैं और साझेदारी में अच्छा करते हैं।"
+   },
+   {
+    "en": "Intense, private and determined. You look beneath the surface of things.",
+    "hi": "तीव्र, अंतर्मुखी और दृढ़। आप चीज़ों की गहराई तक देखते हैं।"
+   },
+   {
+    "en": "Hopeful, honest and drawn to learning, travel and meaning.",
+    "hi": "आशावादी, ईमानदार और सीखने, यात्रा व अर्थ की खोज की ओर आकर्षित।"
+   },
+   {
+    "en": "Disciplined and ambitious. You work patiently towards long goals.",
+    "hi": "अनुशासित और महत्वाकांक्षी। आप लंबे लक्ष्यों की ओर धैर्य से काम करते हैं।"
+   },
+   {
+    "en": "Independent and idealistic. You think about groups, ideas and the future.",
+    "hi": "स्वतंत्र और आदर्शवादी। आप समूह, विचार और भविष्य के बारे में सोचते हैं।"
+   },
+   {
+    "en": "Gentle, imaginative and intuitive. You are drawn to compassion and the inner life.",
+    "hi": "कोमल, कल्पनाशील और सहज-बोध वाले। आप करुणा और भीतरी जीवन की ओर खिंचते हैं।"
+   }
+  ],
+  "Moon": [
+   {
+    "en": "You feel quickly and want to act on it. Doing something is how you settle.",
+    "hi": "आप जल्दी महसूस करते हैं और उस पर कुछ करना चाहते हैं। कुछ करने से ही आप शांत होते हैं।"
+   },
+   {
+    "en": "Calm and comfort-loving. You need routine and are slow to change your mind.",
+    "hi": "शांत और आराम पसंद। आपको दिनचर्या चाहिए और आप राय बदलने में धीमे हैं।"
+   },
+   {
+    "en": "A restless, lively mind. Talking, reading and moving around settle you.",
+    "hi": "चंचल और सक्रिय मन। बात करना, पढ़ना और घूमना आपको शांत करता है।"
+   },
+   {
+    "en": "Deeply sensitive and nurturing. You need home and a sense of belonging.",
+    "hi": "गहरे संवेदनशील और पालन करने वाले। आपको घर और अपनेपन का एहसास चाहिए।"
+   },
+   {
+    "en": "Big-hearted and expressive. You need appreciation and warmth around you.",
+    "hi": "बड़े दिल वाले और अभिव्यक्त। आपको सराहना और अपनापन चाहिए।"
+   },
+   {
+    "en": "You think things through and can worry. Order and useful work calm you.",
+    "hi": "आप हर बात पर सोचते हैं और चिंता कर सकते हैं। व्यवस्था और उपयोगी काम आपको शांत करते हैं।"
+   },
+   {
+    "en": "You need harmony and dislike conflict. Company and fairness steady you.",
+    "hi": "आपको सामंजस्य चाहिए और टकराव पसंद नहीं। साथ और निष्पक्षता आपको स्थिर रखते हैं।"
+   },
+   {
+    "en": "Deep, guarded feelings with a strong memory and strong loyalty.",
+    "hi": "गहरी और छिपी हुई भावनाएँ, मज़बूत याददाश्त और गहरी निष्ठा।"
+   },
+   {
+    "en": "Hopeful and free-spirited. You need space and a purpose to look towards.",
+    "hi": "आशावादी और स्वतंत्र मन। आपको खुली जगह और आगे देखने के लिए उद्देश्य चाहिए।"
+   },
+   {
+    "en": "Reserved and controlled with feelings. You stay steady under pressure.",
+    "hi": "भावनाओं में संयमित और कम बोलने वाले। दबाव में भी स्थिर रहते हैं।"
+   },
+   {
+    "en": "Thoughtful and a little detached. You need friends and your own freedom.",
+    "hi": "विचारशील और थोड़े निर्लिप्त। आपको मित्र और अपनी आज़ादी चाहिए।"
+   },
+   {
+    "en": "Empathic and dreamy. You need quiet and time alone to recover.",
+    "hi": "सहानुभूतिपूर्ण और स्वप्निल। उबरने के लिए आपको शांति और अकेला समय चाहिए।"
+   }
+  ],
+  "Lagna": [
+   {
+    "en": "You come across as energetic and direct, quick to begin and slow to wait.",
+    "hi": "आप ऊर्जावान और सीधे दिखते हैं, शुरू करने में तेज़ और इंतज़ार में धीमे।"
+   },
+   {
+    "en": "You come across as calm, steady and pleasant, with a liking for comfort.",
+    "hi": "आप शांत, स्थिर और सुखद लगते हैं, और आराम पसंद करते हैं।"
+   },
+   {
+    "en": "You come across as lively, curious and talkative, often looking young.",
+    "hi": "आप चंचल, जिज्ञासु और बातूनी लगते हैं, और अक्सर युवा दिखते हैं।"
+   },
+   {
+    "en": "You come across as gentle and sensitive; your mood tends to show on your face.",
+    "hi": "आप कोमल और संवेदनशील लगते हैं; आपका मूड अक्सर चेहरे पर दिखता है।"
+   },
+   {
+    "en": "You come across as confident and dignified, a natural presence in a room.",
+    "hi": "आप आत्मविश्वासी और गरिमामय लगते हैं, किसी भी सभा में आपकी उपस्थिति दिखती है।"
+   },
+   {
+    "en": "You come across as modest, neat and observant, careful in how you act.",
+    "hi": "आप विनम्र, सुव्यवस्थित और पैनी नज़र वाले लगते हैं, और सोच-समझकर चलते हैं।"
+   },
+   {
+    "en": "You come across as charming, courteous and tactful, with an eye for beauty.",
+    "hi": "आप आकर्षक, शिष्ट और व्यवहारकुशल लगते हैं, और सुंदरता की परख रखते हैं।"
+   },
+   {
+    "en": "You come across as intense, magnetic and reserved, with strong willpower.",
+    "hi": "आप तीव्र, चुंबकीय और संयमित लगते हैं, और इच्छाशक्ति मज़बूत है।"
+   },
+   {
+    "en": "You come across as open, cheerful and honest, with a love of freedom.",
+    "hi": "आप खुले, प्रसन्न और ईमानदार लगते हैं, और आज़ादी पसंद करते हैं।"
+   },
+   {
+    "en": "You come across as serious, mature and responsible, a patient builder.",
+    "hi": "आप गंभीर, परिपक्व और ज़िम्मेदार लगते हैं, एक धैर्यवान निर्माता।"
+   },
+   {
+    "en": "You come across as friendly, thoughtful and a little unconventional.",
+    "hi": "आप मिलनसार, विचारशील और थोड़े अलग तरह के लगते हैं।"
+   },
+   {
+    "en": "You come across as soft, kind and dreamy, adaptable and private.",
+    "hi": "आप कोमल, दयालु और स्वप्निल लगते हैं, लचीले और निजी स्वभाव के।"
+   }
+  ]
+ },
+ "planet_role": {
+  "Sun": {
+   "en": "self, confidence and purpose",
+   "hi": "स्वयं, आत्मविश्वास और उद्देश्य"
+  },
+  "Moon": {
+   "en": "mind, feelings and comfort",
+   "hi": "मन, भावनाओं और सुकून"
+  },
+  "Mars": {
+   "en": "energy, courage and drive",
+   "hi": "ऊर्जा, साहस और उत्साह"
+  },
+  "Mercury": {
+   "en": "thinking, speech and learning",
+   "hi": "सोच, वाणी और सीखने"
+  },
+  "Jupiter": {
+   "en": "wisdom, growth and guidance",
+   "hi": "ज्ञान, विकास और मार्गदर्शन"
+  },
+  "Venus": {
+   "en": "love, comfort and beauty",
+   "hi": "प्रेम, सुख और सुंदरता"
+  },
+  "Saturn": {
+   "en": "discipline, patience and duty",
+   "hi": "अनुशासन, धैर्य और कर्तव्य"
+  },
+  "Rahu": {
+   "en": "ambition, appetite and the new",
+   "hi": "महत्वाकांक्षा, चाह और नएपन"
+  },
+  "Ketu": {
+   "en": "detachment, insight and letting go",
+   "hi": "वैराग्य, अंतर्दृष्टि और छोड़ने"
+  }
+ }
+}

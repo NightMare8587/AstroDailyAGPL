@@ -30,6 +30,8 @@ class Settings(BaseSettings):
 
     # Content library: show draft (unreviewed) wording. Keep false in production until a reviewer approves.
     content_allow_draft: bool = False
+    # Meaning texts on the Chart tab (planets, houses, Lagna). Shown while still draft; set false to show only reviewed.
+    chart_meanings_allow_draft: bool = True
 
     # Push notifications (Firebase Cloud Messaging). The service-account JSON, as one string. Without it the
     # dispatcher only logs what it would send.

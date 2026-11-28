@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..calc import dasha, names, zodiac
+from ..content import chart_meanings
 from ..calc.kundli import compute_chart, names_pair, resolve_birth_moment
 from ..db import get_optional_db
 from ..ratelimit import limit
@@ -41,6 +42,21 @@ class SignOut(Named):
     number: int
 
 
+class MeaningOut(BaseModel):
+    """What the body stands for and what its sign and house add. Draft until a reviewer approves the wording."""
+    about: Named
+    in_sign: Named
+    in_house: Named | None = None
+    status: str
+
+
+def _meaning(m: chart_meanings.Meaning | None) -> MeaningOut | None:
+    if m is None:
+        return None
+    return MeaningOut(about=Named(**m.about), in_sign=Named(**m.in_sign),
+                      in_house=Named(**m.in_house) if m.in_house else None, status=m.status)
+
+
 class PlanetOut(BaseModel):
     key: str
     name: Named
@@ -53,6 +69,7 @@ class PlanetOut(BaseModel):
     retrograde: bool
     dignity: str | None
     navamsa_sign: SignOut
+    meaning: MeaningOut | None = None
 
 
 class LagnaOut(BaseModel):
@@ -62,6 +79,7 @@ class LagnaOut(BaseModel):
     nakshatra: SignOut
     pada: int
     navamsa_sign: SignOut
+    meaning: MeaningOut | None = None
 
 
 class HouseOut(BaseModel):
@@ -165,12 +183,15 @@ def build_kundli(*, birth_date: date_type, birth_time: time_type, location: Loca
         lagna=LagnaOut(
             longitude=chart["lagna"]["longitude"], sign=_sign(chart["lagna"]["sign"]),
             degree_in_sign=chart["lagna"]["degree_in_sign"], nakshatra=_nak(chart["lagna"]["nakshatra"]),
-            pada=chart["lagna"]["pada"], navamsa_sign=_sign(chart["lagna"]["navamsa_sign"])),
+            pada=chart["lagna"]["pada"], navamsa_sign=_sign(chart["lagna"]["navamsa_sign"]),
+            meaning=_meaning(chart_meanings.lagna_meaning(chart["lagna"]["sign"]))),
         planets=[PlanetOut(
             key=p["key"], name=Named(**p["name"]), longitude=p["longitude"], sign=_sign(p["sign"]),
             degree_in_sign=p["degree_in_sign"], nakshatra=_nak(p["nakshatra"]), pada=p["pada"],
             house=p["house"], retrograde=p["retrograde"], dignity=p["dignity"],
-            navamsa_sign=_sign(p["navamsa_sign"])) for p in chart["planets"]],
+            navamsa_sign=_sign(p["navamsa_sign"]),
+            meaning=_meaning(chart_meanings.planet_meaning(p["key"], p["sign"], names_pair(zodiac.SIGNS[p["sign"] - 1]),
+                                                           p["house"]))) for p in chart["planets"]],
         houses=[HouseOut(house=h["house"], sign=_sign(h["sign"]), lord=_lord(h["lord"]), planets=h["planets"])
                 for h in chart["houses"]],
         dasha=DashaOut(
