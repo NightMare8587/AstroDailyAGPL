@@ -14,6 +14,10 @@ tend to look for in a partner. It needs consent and a birth profile with a birth
 3. It is saved once per profile and language (`love_readings`), so it costs nothing on later opens and does not change.
    It is removed when the birth details change, with the profile, or with the account, and it is in the export.
 
+The response also carries `facts` (the Lagna, the 7th house sign and its lord, the planets in the 7th, Venus, and the
+Navamsa Lagna and 7th house) as plain data, so the app can show them as icons beside the paragraph. They are worked out
+on each request and not stored.
+
 No name, birth date, birth time or coordinates are sent to the model. The rules behind the facts are common
 convention and have not been reviewed by a Jyotish expert; the status stays `draft` until they are.
 

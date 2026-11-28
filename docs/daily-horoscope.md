@@ -25,3 +25,15 @@ profile). Allowed days: today and tomorrow in the person's day location; other d
   `python -m astrodaily.tools.build_daily_horoscopes` and schedule `30 22 * * *` (04:00 IST; Railway cron is UTC).
   `--dry-run` only counts who is due.
 - **Not built:** writing tomorrow's horoscope ahead of time.
+
+## Planet cards
+
+`GET /v1/me/horoscope/planets?date=&lang=` returns five small cards for the day, one per life area, each tied to one planet
+in the person's birth chart: career to Saturn, money to Jupiter, relationships to Venus, health and energy to Mars, mind
+to Mercury. A card has the planet's sign and house and the day's score for the area (from the chart and the day's report),
+the planet-in-sign-and-house sentences from the content library (`content/chart_meanings.py`, draft until reviewed), and a
+headline and one-line message written by the model. One model call writes all five (JSON, checked and tone-checked, one
+retry); they are saved once per profile, day and language in `daily_planet_cards`, like the daily paragraph, and removed
+when birth details change, with the profile or the account, and are in the export. Today and tomorrow only; the house
+needs the birth time (409 without one). No name, birth date, birth time or coordinates go to the model. The planet
+for each area is a simple convention, not reviewed by a Jyotish expert.

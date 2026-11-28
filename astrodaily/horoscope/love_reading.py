@@ -36,32 +36,51 @@ def _sign(n: int) -> str:
     return zodiac.SIGNS[n - 1][0]
 
 
-def facts(chart: dict) -> str:
-    """The chart facts the reading may use, as plain lines. Derived facts only."""
+def key_facts(chart: dict) -> dict:
+    """The chart facts the reading and the page both use, as plain data (sign numbers 1..12, planet keys)."""
     lagna = chart["lagna"]["sign"]
     planets = {p["key"]: p for p in chart["planets"]}
     seventh = (lagna + 5) % 12 + 1
     lord = zodiac.SIGN_LORDS[seventh - 1]
-    lp = planets[lord]
-    in_seventh = [k for k, p in planets.items() if p["house"] == 7]
-    venus = planets["Venus"]
     # The planet with the fewest degrees in its sign is the Darakaraka (partner significator) in the common seven-karaka scheme.
     dara = min((planets[k] for k in KARAKAS), key=lambda p: p["degree_in_sign"])
     nav_lagna = chart["lagna"]["navamsa_sign"]
     nav_seventh = (nav_lagna + 5) % 12 + 1
+    return {
+        "lagna": lagna,
+        "seventh_sign": seventh,
+        "seventh_lord": {"key": lord, "sign": planets[lord]["sign"], "house": planets[lord]["house"],
+                         "dignity": planets[lord]["dignity"]},
+        "in_seventh": [k for k, p in planets.items() if p["house"] == 7],
+        "venus": {"sign": planets["Venus"]["sign"], "house": planets["Venus"]["house"],
+                  "dignity": planets["Venus"]["dignity"], "retrograde": planets["Venus"]["retrograde"]},
+        "darakaraka": {"key": dara["key"], "sign": dara["sign"], "house": dara["house"], "dignity": dara["dignity"]},
+        "navamsa_lagna": nav_lagna,
+        "navamsa_seventh": nav_seventh,
+        "navamsa_seventh_lord": zodiac.SIGN_LORDS[nav_seventh - 1],
+        "navamsa_venus": planets["Venus"]["navamsa_sign"],
+    }
 
-    def placed(p: dict) -> str:
-        extra = f", {p['dignity']}" if p["dignity"] else ""
-        return f"{_sign(p['sign'])} (house {p['house']}{extra})"
 
+def facts(chart: dict) -> str:
+    """The chart facts the reading may use, as plain lines. Derived facts only."""
+    f = key_facts(chart)
+
+    def placed(sign: int, house: int, dignity: str | None) -> str:
+        return f"{_sign(sign)} (house {house}{', ' + dignity if dignity else ''})"
+
+    lord, venus, dara = f["seventh_lord"], f["venus"], f["darakaraka"]
     return "\n".join([
-        f"Ascendant (lagna): {_sign(lagna)}.",
-        f"7th house of partnership: {_sign(seventh)}, ruled by {lord}. {lord} is in {placed(lp)}.",
-        "Planets in the 7th house: " + (", ".join(in_seventh) or "none") + ".",
-        f"Venus (love, attraction): in {placed(venus)}" + (", retrograde" if venus["retrograde"] else "") + ".",
-        f"Partner significator (Darakaraka, the planet with the fewest degrees in its sign): {dara['key']}, in {placed(dara)}.",
-        f"Navamsa (D9, the chart of marriage and inner strength): lagna {_sign(nav_lagna)}; its 7th house is "
-        f"{_sign(nav_seventh)}, ruled by {zodiac.SIGN_LORDS[nav_seventh - 1]}; Venus is in {_sign(venus['navamsa_sign'])}.",
+        f"Ascendant (lagna): {_sign(f['lagna'])}.",
+        f"7th house of partnership: {_sign(f['seventh_sign'])}, ruled by {lord['key']}. {lord['key']} is in "
+        f"{placed(lord['sign'], lord['house'], lord['dignity'])}.",
+        "Planets in the 7th house: " + (", ".join(f["in_seventh"]) or "none") + ".",
+        f"Venus (love, attraction): in {placed(venus['sign'], venus['house'], venus['dignity'])}"
+        + (", retrograde" if venus["retrograde"] else "") + ".",
+        f"Planet that shows the partner (Darakaraka, the planet with the fewest degrees in its sign): {dara['key']}, "
+        f"in {placed(dara['sign'], dara['house'], dara['dignity'])}.",
+        f"Navamsa (D9, the chart of marriage and inner strength): lagna {_sign(f['navamsa_lagna'])}; its 7th house is "
+        f"{_sign(f['navamsa_seventh'])}, ruled by {f['navamsa_seventh_lord']}; Venus is in {_sign(f['navamsa_venus'])}.",
     ])
 
 

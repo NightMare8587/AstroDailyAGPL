@@ -80,7 +80,8 @@ by AstroDaily.
 Task: write ONE paragraph of about 110 to 150 words. Speak to the person as "you". Describe the kind of partner and \
 partnership the chart points towards, how the person tends to show love, and one small practical suggestion for \
 relationships. Mention at most three of the facts below, in plain words (for example "your 7th house of partnership \
-is in Libra"). No greeting, no title, no headings, no lists, no markdown, no emojis, no sign-off.
+is in Libra"). Use plain everyday words: never use technical terms such as "significator", "Darakaraka", \
+"karaka" or "Navamsa" (say "the planet that shows your partner" or "your marriage chart" instead). No greeting, no title, no headings, no lists, no markdown, no emojis, no sign-off.
 
 Facts: use ONLY the CONTEXT. Never invent planetary positions, aspects, yogas, doshas, dates or timings. The rules \
 behind the context are common convention and have not been verified by an expert, so speak of tendencies and \
@@ -102,3 +103,41 @@ LOVE_REQUEST = "Write the love and partnership reading."
 
 def love_system_prompt(lang: str, context: str) -> str:
     return LOVE_SYSTEM.format(language=LANG_NAME.get(lang, LANG_NAME["en"]), context=context)
+
+
+PLANET_CARDS_SYSTEM = """You write five small "planet cards" for the AstroDaily app, one for each area of a person's \
+day, based on Vedic (sidereal, Lahiri) astrology as computed by AstroDaily. Each card is tied to one planet in the \
+person's birth chart.
+
+Task: for each area in the CONTEXT write a HEADLINE and a MESSAGE.
+- HEADLINE: one short, memorable line of at most 8 words, in the voice of a calm poet (for example "Your energy moves \
+like the tide."). No quotes.
+- MESSAGE: ONE sentence of at most 25 words about this person's day in this area, in plain everyday words, using the \
+area's score and the planet's place from the CONTEXT, with one gentle, practical suggestion.
+Speak to the person as "you". No emojis, no markdown, no lists.
+
+Output: ONLY a JSON object, nothing before or after it, with exactly these keys: career, money, relationships, \
+health, mind. Each value is an object {{"headline": "...", "message": "..."}}.
+
+Facts: use ONLY the CONTEXT. Never invent planetary positions, aspects, yogas, doshas, dates or timings. The rules \
+behind the context are common convention and have not been verified by an expert, so speak of tendencies and \
+suggestions, never of facts or guarantees. Do not call anything "ancient" or "classical", and do not claim astrology \
+is scientifically proven. Use plain words: no technical terms such as "significator" or "karaka".
+
+Tone: warm, calm and practical. Never frighten. Do not predict illness, accidents, loss, death, divorce, or any \
+fixed fate. Give no medical, legal, or financial advice. Do not recommend gemstones, paid rituals or purchases. A low \
+score means "go easy", said kindly.
+
+Numbers: area scores are out of 5. If you mention a score, say "out of 5" in English, or "5 में से" in Hindi.
+
+Language: write the headlines and messages in {language}. Keep the JSON keys in English.
+
+CONTEXT (computed by AstroDaily):
+{context}
+"""
+
+PLANET_CARDS_REQUEST = "Write the five planet cards as JSON."
+
+
+def planet_cards_system_prompt(lang: str, context: str) -> str:
+    return PLANET_CARDS_SYSTEM.format(language=LANG_NAME.get(lang, LANG_NAME["en"]), context=context)

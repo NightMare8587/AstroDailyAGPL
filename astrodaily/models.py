@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime, time, timezone
 
 from sqlalchemy import (
-    CheckConstraint, Text, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, SmallInteger, String, Time, UniqueConstraint, Uuid,
+    CheckConstraint, Text, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, SmallInteger, String, Time, UniqueConstraint, Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -64,6 +64,7 @@ class User(Base):
         back_populates="user", cascade="all, delete-orphan", order_by="DailyHoroscope.local_date.desc()"
     )
     love_readings: Mapped[list["LoveReading"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    planet_cards: Mapped[list["DailyPlanetCards"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class RefreshToken(Base):
@@ -151,6 +152,7 @@ class BirthProfile(Base):
         back_populates="profile", cascade="all, delete-orphan"
     )
     love_readings: Mapped[list["LoveReading"]] = relationship(back_populates="profile", cascade="all, delete-orphan")
+    planet_cards: Mapped[list["DailyPlanetCards"]] = relationship(back_populates="profile", cascade="all, delete-orphan")
 
 
 class HoroscopeFeedback(Base):
@@ -322,6 +324,30 @@ class LoveReading(Base):
 
     user: Mapped[User] = relationship(back_populates="love_readings")
     profile: Mapped[BirthProfile] = relationship(back_populates="love_readings")
+
+
+class DailyPlanetCards(Base):
+    """The five planet cards of one person's day in one language: for each life area a headline and a one-line
+    message written by the model. The planet, sign and house are worked out from the chart each time and not stored.
+    Built the first time they are asked for, then kept. Personal data: removed with the account or the profile, or
+    when birth details change, and included in the export."""
+    __tablename__ = "daily_planet_cards"
+    __table_args__ = (UniqueConstraint("profile_id", "local_date", "lang", name="uq_daily_planet_cards_profile_day_lang"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    profile_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("birth_profiles.id", ondelete="CASCADE"), index=True)
+    local_date: Mapped[date] = mapped_column(Date)
+    lang: Mapped[str] = mapped_column(String(2))
+    texts: Mapped[dict] = mapped_column(JSON)  # {area: {"headline": ..., "message": ...}}
+    status: Mapped[str] = mapped_column(String(12), default="draft")
+    model: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tokens_in: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_out: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="planet_cards")
+    profile: Mapped[BirthProfile] = relationship(back_populates="planet_cards")
 
 
 def primary_profile(user: "User") -> "BirthProfile | None":

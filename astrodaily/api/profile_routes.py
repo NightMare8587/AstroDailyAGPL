@@ -15,7 +15,7 @@ from ..auth.deps import get_current_user
 from ..config import get_settings
 from ..db import get_db
 from ..calc import moonsign
-from ..horoscope import daily_text, love_reading
+from ..horoscope import daily_text, love_reading, planet_cards
 from ..models import BirthProfile, Place, User
 from ..ratelimit import limit
 from .birth import Location, check_date, place_label as _place_label, resolve_location
@@ -184,6 +184,7 @@ def update_profile(profile_id: uuid.UUID, body: ProfileUpdate, user: User = Depe
     if sent & {"birth_date", "birth_time", "place_id", "lat", "lon", "tz", "utc_offset_minutes"}:
         daily_text.forget(db, profile)  # the written horoscopes were made from the old details
         love_reading.forget(db, profile)
+        planet_cards.forget(db, profile)
     db.commit()
     return ProfileOut.from_profile(profile)
 
@@ -266,6 +267,13 @@ class LoveReadingExport(BaseModel):
     created_at: datetime
 
 
+class PlanetCardsExport(BaseModel):
+    date: date_type
+    lang: str
+    texts: dict
+    created_at: datetime
+
+
 class ExportOut(BaseModel):
     account: UserOut
     consented_at: datetime | None
@@ -275,6 +283,7 @@ class ExportOut(BaseModel):
     chats: list[ChatExport] = []
     daily_horoscopes: list[DailyHoroscopeExport] = []
     love_readings: list[LoveReadingExport] = []
+    planet_cards: list[PlanetCardsExport] = []
 
 
 @export_router.get("/export", response_model=ExportOut)
@@ -292,7 +301,9 @@ def export_my_data(user: User = Depends(get_current_user)) -> ExportOut:
                      daily_horoscopes=[DailyHoroscopeExport(date=h.local_date, lang=h.lang, text=h.text,
                                                             created_at=h.created_at) for h in user.daily_horoscopes],
                      love_readings=[LoveReadingExport(lang=r.lang, text=r.text, created_at=r.created_at)
-                                    for r in user.love_readings])
+                                    for r in user.love_readings],
+                     planet_cards=[PlanetCardsExport(date=c.local_date, lang=c.lang, texts=c.texts, created_at=c.created_at)
+                                   for c in user.planet_cards])
 
 
 def _notifications_export(user: User) -> NotificationExport | None:

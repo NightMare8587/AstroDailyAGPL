@@ -49,6 +49,18 @@ def test_built_once_then_saved(ready):
     assert len(llm.calls) == 1 and rows(api) == 1
 
 
+def test_the_reading_comes_with_the_facts_for_the_icons(ready):
+    api, h, _ = ready
+    use_llm(FakeLlm("A reading."))
+    f = get(api, h).json()["facts"]
+    assert 1 <= f["lagna"]["number"] <= 12 and f["lagna"]["en"] and f["lagna"]["hi"]
+    assert f["seventh_sign"]["number"] == (f["lagna"]["number"] + 5) % 12 + 1
+    assert f["seventh_lord"]["key"] and f["seventh_lord"]["name"]["hi"] and 1 <= f["seventh_lord"]["house"] <= 12
+    assert f["venus"]["key"] == "Venus" and 1 <= f["venus"]["sign"]["number"] <= 12
+    assert all(p["key"] and p["name"]["en"] for p in f["in_seventh"])
+    assert 1 <= f["navamsa_lagna"]["number"] <= 12 and f["navamsa_seventh"]["number"] == (f["navamsa_lagna"]["number"] + 5) % 12 + 1
+
+
 def test_each_language_is_its_own(ready):
     api, h, _ = ready
     llm = use_llm(FakeLlm("English reading.", "हिंदी पाठ।"))
@@ -109,7 +121,7 @@ def test_the_model_gets_chart_facts_and_no_personal_details(ready):
     llm = use_llm(FakeLlm())
     get(api, h)
     system = llm.calls[0][0]
-    for needle in ("Ascendant (lagna)", "7th house of partnership", "Venus (love", "Darakaraka", "Navamsa (D9", "110 to 150 words"):
+    for needle in ("Ascendant (lagna)", "7th house of partnership", "Venus (love", "Darakaraka", "Navamsa (D9", "110 to 150 words", "plain everyday words", "Planet that shows the partner"):
         assert needle in system, needle
     for secret in ("SecretLabel", "alice", "example.com", "1990", "10:00", "28.65", "77.23", "Delhi"):
         assert secret not in system, f"{secret!r} leaked to the model"
@@ -141,7 +153,7 @@ def test_facts_are_worked_out_from_the_chart():
     assert "7th house of partnership: Libra, ruled by Venus. Venus is in Taurus (house 2)." in text
     assert "Planets in the 7th house: Mars." in text
     # Venus has the fewest degrees (2.5), so it is the Darakaraka.
-    assert "Darakaraka, the planet with the fewest degrees in its sign): Venus, in Taurus" in text
+    assert "Planet that shows the partner (Darakaraka, the planet with the fewest degrees in its sign): Venus, in Taurus" in text
     # Navamsa lagna Virgo: its 7th is Pisces, ruled by Jupiter; Venus is in the Navamsa sign 8 = Scorpio.
     assert "lagna Virgo; its 7th house is Pisces, ruled by Jupiter; Venus is in Scorpio." in text
     assert text.count("\n") == 5 and zodiac.SIGNS[0][0] == "Aries"

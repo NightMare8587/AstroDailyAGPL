@@ -5,6 +5,8 @@ from .api.auth_routes import router as auth_router
 from .api.chat_routes import router as chat_router
 from .api.daily_text_routes import router as daily_text_router
 from .api.love_routes import router as love_router
+from .api.match_routes import router as match_router
+from .api.planet_card_routes import router as planet_card_router
 from .api.widget_routes import card_router as widget_card_router, token_router as widget_token_router
 from .api.horoscope_routes import feedback_router, me_router as horoscope_me_router
 from .api.horoscope_routes import profile_router as horoscope_profile_router
@@ -40,6 +42,8 @@ app.include_router(feedback_router)
 app.include_router(horoscope_profile_router)
 app.include_router(daily_text_router)
 app.include_router(love_router)
+app.include_router(match_router)
+app.include_router(planet_card_router)
 app.include_router(widget_token_router)
 app.include_router(widget_card_router)
 app.include_router(horoscope_me_router)
