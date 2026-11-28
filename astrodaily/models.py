@@ -58,6 +58,9 @@ class User(Base):
     conversations: Mapped[list["ChatConversation"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", order_by="ChatConversation.updated_at.desc()"
     )
+    daily_horoscopes: Mapped[list["DailyHoroscope"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", order_by="DailyHoroscope.local_date.desc()"
+    )
 
 
 class RefreshToken(Base):
@@ -139,6 +142,9 @@ class BirthProfile(Base):
         back_populates="profile", cascade="all, delete-orphan"
     )
     conversations: Mapped[list["ChatConversation"]] = relationship(
+        back_populates="profile", cascade="all, delete-orphan"
+    )
+    daily_horoscopes: Mapped[list["DailyHoroscope"]] = relationship(
         back_populates="profile", cascade="all, delete-orphan"
     )
 
@@ -267,6 +273,29 @@ class ChatMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     conversation: Mapped[ChatConversation] = relationship(back_populates="messages")
+
+
+class DailyHoroscope(Base):
+    """The written horoscope for one person on one day, in one language. Built the first time it is asked for and
+    then kept, so it does not change that day. Personal data: removed with the account or the profile, and included
+    in the export."""
+    __tablename__ = "daily_horoscopes"
+    __table_args__ = (UniqueConstraint("profile_id", "local_date", "lang", name="uq_daily_horoscope_profile_day_lang"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    profile_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("birth_profiles.id", ondelete="CASCADE"), index=True)
+    local_date: Mapped[date] = mapped_column(Date)
+    lang: Mapped[str] = mapped_column(String(2))
+    text: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(12), default="draft")  # draft until the wording is reviewed
+    model: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tokens_in: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_out: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="daily_horoscopes")
+    profile: Mapped[BirthProfile] = relationship(back_populates="daily_horoscopes")
 
 
 def primary_profile(user: "User") -> "BirthProfile | None":

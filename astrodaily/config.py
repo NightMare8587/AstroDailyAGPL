@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     chat_timeout_seconds: int = 30
     chat_max_conversations: int = 50          # per account; the oldest are not auto-deleted, new ones are refused
 
+    # Written daily horoscope (Gemini, saved per profile, day and language). 0 free limit = no limit (everything free).
+    daily_horoscope_free_limit: int = 0       # days of written horoscope one account gets free; later days need Pro
+    daily_horoscope_max_output_tokens: int = 900
+
     # Most birth profiles one account may keep (the user's own plus family).
     max_profiles_per_user: int = 5
 

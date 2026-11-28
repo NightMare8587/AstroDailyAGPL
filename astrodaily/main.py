@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from . import __version__
 from .api.auth_routes import router as auth_router
 from .api.chat_routes import router as chat_router
+from .api.daily_text_routes import router as daily_text_router
 from .api.horoscope_routes import feedback_router, me_router as horoscope_me_router
 from .api.horoscope_routes import profile_router as horoscope_profile_router
 from .api.horoscope_routes import router as horoscope_router
@@ -35,4 +36,5 @@ app.include_router(profile_router)
 app.include_router(horoscope_router)
 app.include_router(feedback_router)
 app.include_router(horoscope_profile_router)
+app.include_router(daily_text_router)
 app.include_router(horoscope_me_router)

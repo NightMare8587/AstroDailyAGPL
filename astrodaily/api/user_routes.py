@@ -12,6 +12,7 @@ from ..config import get_settings
 from ..models import BirthProfile, Place, User, utcnow
 from ..ratelimit import limit
 from .birth import check_date, place_label, resolve_location
+from ..horoscope import daily_text
 from .profile_routes import settle_moon_sign
 from .schemas import UserOut
 from sqlalchemy import func, select
@@ -125,10 +126,13 @@ def setup(body: SetupIn, user: User = Depends(get_current_user), db: Session = D
     loc = resolve_location(db, place.id, None, None, None)
     if mine.place_id != place.id:
         mine.utc_offset_minutes = None  # an explicit UTC offset belongs to the old place; keep it only when the place is the same
+    before = (mine.birth_date, mine.birth_time, mine.place_id)
     mine.birth_date, mine.birth_time = body.date_of_birth, body.birth_time
     mine.place_id, mine.place_name = place.id, place_label(place)
     mine.latitude, mine.longitude, mine.timezone = loc.latitude, loc.longitude, loc.timezone
     settle_moon_sign(mine, body.moon_sign)
+    if before != (mine.birth_date, mine.birth_time, mine.place_id):
+        daily_text.forget(db, mine)  # written from the old details
     db.commit()
     db.refresh(user)
     return UserOut.from_user(user)

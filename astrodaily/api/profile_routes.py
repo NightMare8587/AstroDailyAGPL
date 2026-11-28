@@ -15,6 +15,7 @@ from ..auth.deps import get_current_user
 from ..config import get_settings
 from ..db import get_db
 from ..calc import moonsign
+from ..horoscope import daily_text
 from ..models import BirthProfile, Place, User
 from ..ratelimit import limit
 from .birth import Location, check_date, place_label as _place_label, resolve_location
@@ -180,6 +181,8 @@ def update_profile(profile_id: uuid.UUID, body: ProfileUpdate, user: User = Depe
     if "utc_offset_minutes" in sent:
         profile.utc_offset_minutes = body.utc_offset_minutes
     settle_moon_sign(profile, body.moon_sign)  # the date, time or place may have changed the answer
+    if sent & {"birth_date", "birth_time", "place_id", "lat", "lon", "tz", "utc_offset_minutes"}:
+        daily_text.forget(db, profile)  # the written horoscopes were made from the old details
     db.commit()
     return ProfileOut.from_profile(profile)
 
@@ -249,6 +252,13 @@ class ChatExport(BaseModel):
     messages: list[ChatMessageExport]
 
 
+class DailyHoroscopeExport(BaseModel):
+    date: date_type
+    lang: str
+    text: str
+    created_at: datetime
+
+
 class ExportOut(BaseModel):
     account: UserOut
     consented_at: datetime | None
@@ -256,6 +266,7 @@ class ExportOut(BaseModel):
     horoscope_feedback: list[FeedbackExport] = []
     notifications: NotificationExport | None = None
     chats: list[ChatExport] = []
+    daily_horoscopes: list[DailyHoroscopeExport] = []
 
 
 @export_router.get("/export", response_model=ExportOut)
@@ -269,7 +280,9 @@ def export_my_data(user: User = Depends(get_current_user)) -> ExportOut:
                      notifications=_notifications_export(user),
                      chats=[ChatExport(id=str(c.id), title=c.title, created_at=c.created_at,
                                        messages=[ChatMessageExport(role=m.role, text=m.text, created_at=m.created_at)
-                                                 for m in c.messages]) for c in user.conversations])
+                                                 for m in c.messages]) for c in user.conversations],
+                     daily_horoscopes=[DailyHoroscopeExport(date=h.local_date, lang=h.lang, text=h.text,
+                                                            created_at=h.created_at) for h in user.daily_horoscopes])
 
 
 def _notifications_export(user: User) -> NotificationExport | None:
