@@ -69,6 +69,8 @@ class PlanetOut(BaseModel):
     retrograde: bool
     dignity: str | None
     navamsa_sign: SignOut
+    saptamsa_sign: SignOut
+    dashamsa_sign: SignOut
     meaning: MeaningOut | None = None
 
 
@@ -79,6 +81,8 @@ class LagnaOut(BaseModel):
     nakshatra: SignOut
     pada: int
     navamsa_sign: SignOut
+    saptamsa_sign: SignOut
+    dashamsa_sign: SignOut
     meaning: MeaningOut | None = None
 
 
@@ -184,12 +188,14 @@ def build_kundli(*, birth_date: date_type, birth_time: time_type, location: Loca
             longitude=chart["lagna"]["longitude"], sign=_sign(chart["lagna"]["sign"]),
             degree_in_sign=chart["lagna"]["degree_in_sign"], nakshatra=_nak(chart["lagna"]["nakshatra"]),
             pada=chart["lagna"]["pada"], navamsa_sign=_sign(chart["lagna"]["navamsa_sign"]),
+            saptamsa_sign=_sign(chart["lagna"]["saptamsa_sign"]), dashamsa_sign=_sign(chart["lagna"]["dashamsa_sign"]),
             meaning=_meaning(chart_meanings.lagna_meaning(chart["lagna"]["sign"]))),
         planets=[PlanetOut(
             key=p["key"], name=Named(**p["name"]), longitude=p["longitude"], sign=_sign(p["sign"]),
             degree_in_sign=p["degree_in_sign"], nakshatra=_nak(p["nakshatra"]), pada=p["pada"],
             house=p["house"], retrograde=p["retrograde"], dignity=p["dignity"],
             navamsa_sign=_sign(p["navamsa_sign"]),
+            saptamsa_sign=_sign(p["saptamsa_sign"]), dashamsa_sign=_sign(p["dashamsa_sign"]),
             meaning=_meaning(chart_meanings.planet_meaning(p["key"], p["sign"], names_pair(zodiac.SIGNS[p["sign"] - 1]),
                                                            p["house"]))) for p in chart["planets"]],
         houses=[HouseOut(house=h["house"], sign=_sign(h["sign"]), lord=_lord(h["lord"]), planets=h["planets"])

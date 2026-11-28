@@ -15,6 +15,7 @@ and not legal advice; a lawyer should review it and the policy text before real 
 | Horoscope feedback: card (Moon sign or profile), date, thumbs up or down, optional "felt accurate" | `horoscope_feedback` | Tuning the rules and content. Removed with the account, and with the profile when it was a profile's card. |
 | Chat messages (what you typed and the guide answered), per conversation, with the model used and token counts | `chat_conversations`, `chat_messages` | The AI chat's history, so a conversation can continue. Removed with the account, with the profile it was about, or when you delete the conversation. Included in the export. |
 | Written daily horoscope (the paragraph shown on the Today tab), per profile, day and language, with the model used and token counts | `daily_horoscopes` | Built once by the model the first time a day is opened, then kept so it does not change that day. Removed with the account, with the profile, or when birth details change. Included in the export. Status `draft` until reviewed. |
+| Written love and partnership reading, per profile and language, with the model used and token counts | `love_readings` | Built once by the model the first time it is opened, then kept (it comes from the birth chart, so it is the same every day). Removed with the account, with the profile, or when birth details change. Included in the export. Status `draft` until reviewed. |
 | Birth profiles: label, birth date and time, birth place and its coordinates and timezone | `birth_profiles` | Charts and daily guidance. Up to 5 per user, so family charts are possible. |
 
 Daily cards are computed on request and not stored (only the written paragraph is). Not stored: IP addresses (used in memory for rate limiting only), any payment data. `POST /v1/kundli` calculates a chart without saving anything.
@@ -58,7 +59,7 @@ Daily cards are computed on request and not stored (only the written paragraph i
 
 ## AI chat and the model provider (Google Gemini)
 
-The written daily horoscope uses the same provider and the same derived facts (no name, birth date, birth time or coordinates), with no typed text. See `docs/daily-horoscope.md`.
+The written daily horoscope uses the same provider and the same derived facts (no name, birth date, birth time or coordinates), with no typed text. See `docs/daily-horoscope.md`. The love reading does the same with chart facts only; see `docs/love-reading.md`.
 
 - **What leaves our server:** the person's typed message, the last 12 messages of that conversation, and a short
   context of *derived* facts: Moon sign, birth star, ascendant, running dasha, today's day score and suggestions,

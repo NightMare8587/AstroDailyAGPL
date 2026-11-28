@@ -12,7 +12,7 @@ from ..config import get_settings
 from ..models import BirthProfile, Place, User, utcnow
 from ..ratelimit import limit
 from .birth import check_date, place_label, resolve_location
-from ..horoscope import daily_text
+from ..horoscope import daily_text, love_reading
 from .profile_routes import settle_moon_sign
 from .schemas import UserOut
 from sqlalchemy import func, select
@@ -133,6 +133,7 @@ def setup(body: SetupIn, user: User = Depends(get_current_user), db: Session = D
     settle_moon_sign(mine, body.moon_sign)
     if before != (mine.birth_date, mine.birth_time, mine.place_id):
         daily_text.forget(db, mine)  # written from the old details
+        love_reading.forget(db, mine)
     db.commit()
     db.refresh(user)
     return UserOut.from_user(user)

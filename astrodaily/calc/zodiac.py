@@ -48,3 +48,22 @@ def navamsa_sign(longitude: float) -> int:
     part = min(int((longitude - sign0 * 30) / (30.0 / 9)), 8)
     start = (sign0 + {0: 0, 1: 8, 2: 4}[sign0 % 3]) % 12
     return (start + part) % 12 + 1
+
+
+def saptamsa_sign(longitude: float) -> int:
+    """D7 sign (children). Each sign has seven parts. Odd signs count from themselves, even signs from the 7th sign."""
+    longitude %= 360.0
+    sign0 = int(longitude // 30)
+    part = min(int((longitude - sign0 * 30) / (30.0 / 7)), 6)
+    start = sign0 if sign0 % 2 == 0 else (sign0 + 6) % 12
+    return (start + part) % 12 + 1
+
+
+def dashamsa_sign(longitude: float) -> int:
+    """D10 sign (career). Each sign has ten parts of 3 degrees. Odd signs count from themselves, even signs from
+    the 9th sign."""
+    longitude %= 360.0
+    sign0 = int(longitude // 30)
+    part = min(int((longitude - sign0 * 30) / 3.0), 9)
+    start = sign0 if sign0 % 2 == 0 else (sign0 + 8) % 12
+    return (start + part) % 12 + 1

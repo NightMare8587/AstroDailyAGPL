@@ -76,6 +76,8 @@ def _position(key: str, longitude: float, retrograde: bool, lagna_sign: int) -> 
         "retrograde": retrograde,
         "dignity": zodiac.dignity(key, sign),
         "navamsa_sign": zodiac.navamsa_sign(longitude),
+        "saptamsa_sign": zodiac.saptamsa_sign(longitude),
+        "dashamsa_sign": zodiac.dashamsa_sign(longitude),
     }
 
 
@@ -101,6 +103,7 @@ def compute_chart(birth: BirthMoment, lat: float, lon: float, node: str = "mean"
     lagna = {
         "longitude": asc, "sign": lagna_sign, "degree_in_sign": asc - (lagna_sign - 1) * 30.0,
         "nakshatra": nak, "pada": pada, "navamsa_sign": zodiac.navamsa_sign(asc),
+        "saptamsa_sign": zodiac.saptamsa_sign(asc), "dashamsa_sign": zodiac.dashamsa_sign(asc),
     }
 
     houses = []

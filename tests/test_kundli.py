@@ -23,6 +23,24 @@ def test_navamsa_known_values():
     assert zodiac.navamsa_sign(359.99) == 12        # last part of Pisces (dual, from Cancer) ends in Pisces
 
 
+def test_saptamsa_known_values():
+    assert zodiac.saptamsa_sign(0.0) == 1           # Aries (odd) starts at Aries
+    assert zodiac.saptamsa_sign(5.0) == 2           # second seventh (4.29 to 8.57): Taurus
+    assert zodiac.saptamsa_sign(29.99) == 7         # last seventh of Aries: Libra
+    assert zodiac.saptamsa_sign(30.0) == 8          # Taurus (even) starts at the 7th sign, Scorpio
+    assert zodiac.saptamsa_sign(60.0) == 3          # Gemini (odd) starts at Gemini
+    assert zodiac.saptamsa_sign(359.99) == 12       # Pisces (even) starts at Virgo; the last seventh is Pisces
+
+
+def test_dashamsa_known_values():
+    assert zodiac.dashamsa_sign(0.0) == 1           # Aries (odd) starts at Aries
+    assert zodiac.dashamsa_sign(3.0) == 2           # second tenth: Taurus
+    assert zodiac.dashamsa_sign(29.99) == 10        # last tenth of Aries: Capricorn
+    assert zodiac.dashamsa_sign(30.0) == 10         # Taurus (even) starts at the 9th sign, Capricorn
+    assert zodiac.dashamsa_sign(60.0) == 3          # Gemini (odd) starts at Gemini
+    assert zodiac.dashamsa_sign(359.99) == 5        # Pisces (even) starts at Scorpio; the last tenth is Leo
+
+
 def test_dignities():
     assert zodiac.dignity("Sun", 1) == "exalted" and zodiac.dignity("Sun", 7) == "debilitated"
     assert zodiac.dignity("Moon", 2) == "exalted" and zodiac.dignity("Moon", 8) == "debilitated"
