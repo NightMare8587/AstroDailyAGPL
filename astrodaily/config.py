@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.5-flash-lite"
     gemini_api_key: str | None = None
     ephemeris_path: str | None = None
+    # Shown on the public Terms and Privacy pages as the address for questions and complaints.
+    legal_contact_email: str | None = None
 
     # Postgres. Railway provides DATABASE_URL as postgresql://...
     database_url: str | None = None

@@ -20,6 +20,10 @@ Daily cards are computed on request and not stored. Not stored: IP addresses (us
 
 ## Rules the code enforces
 
+- **How consent is recorded.** There is no separate consent page. The launch screen says "By continuing you agree to
+  our Terms and Conditions and Privacy Policy" (both open in the app), and the first save on the setup page records the
+  consent version and time. A "?" on the setup page explains what we keep and why. **This is implied consent ("by
+  continuing"): a lawyer must confirm it is enough under the DPDP Act, or whether an explicit tick is needed.**
 - **Consent first.** Every `/v1/profiles` endpoint answers 403 until the user has recorded consent
   (`PATCH /v1/me` with `consent_version`). The version and time are stored.
 - **Owner only.** A profile is visible only to its owner. Another user's profile id answers 404,

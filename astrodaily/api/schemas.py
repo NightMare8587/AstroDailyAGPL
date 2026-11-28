@@ -34,7 +34,7 @@ class UserOut(BaseModel):
     last_name: str | None = None
     date_of_birth: date | None = None
     gender: str | None = None
-    # True once first name, last name and date of birth are filled in (gender is optional).
+    # True once the setup page is done: names, date of birth and a birth profile (gender is optional).
     onboarded: bool = False
     picture_url: str | None
     language: str
@@ -45,7 +45,7 @@ class UserOut(BaseModel):
     def from_user(cls, user: User) -> "UserOut":
         return cls(id=user.id, email=user.email, name=user.name, first_name=user.first_name,
                    last_name=user.last_name, date_of_birth=user.date_of_birth, gender=user.gender,
-                   onboarded=bool(user.first_name and user.last_name and user.date_of_birth),
+                   onboarded=bool(user.first_name and user.last_name and user.date_of_birth and user.profiles),
                    picture_url=user.picture_url,
                    language=user.language, consent_version=user.consent_version,
                    home_place=PlaceOut.from_place(user.home_place) if user.home_place else None)

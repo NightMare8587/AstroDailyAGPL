@@ -184,23 +184,21 @@ def test_new_account_is_not_onboarded(client):
     assert u["first_name"] is None and u["last_name"] is None and u["date_of_birth"] is None and u["gender"] is None
 
 
-def test_setup_fields_are_saved_and_onboard_the_account(client):
+def test_setup_fields_are_saved_but_the_account_is_onboarded_only_with_a_birth_profile(client):
     tok = login(client)
     r = client.patch("/v1/me", headers=auth(tok), json={"first_name": "  Pulkit ", "last_name": "Sharma  Rao",
                                                         "date_of_birth": "1996-08-14", "gender": "male"})
     assert r.status_code == 200, r.text
     u = r.json()
     assert u["first_name"] == "Pulkit" and u["last_name"] == "Sharma Rao"  # trimmed, inner spaces collapsed
-    assert u["date_of_birth"] == "1996-08-14" and u["gender"] == "male" and u["onboarded"] is True
-    assert client.get("/v1/me", headers=auth(tok)).json()["onboarded"] is True
+    assert u["date_of_birth"] == "1996-08-14" and u["gender"] == "male"
+    assert u["onboarded"] is False  # onboarding also needs the "Me" birth profile (POST /v1/me/setup)
 
 
-def test_onboarded_needs_names_and_birth_date_but_not_gender(client):
+def test_gender_is_optional_and_can_be_cleared(client):
     tok = login(client)
-    u = client.patch("/v1/me", headers=auth(tok), json={"first_name": "Asha", "last_name": "Verma"}).json()
-    assert u["onboarded"] is False
-    u = client.patch("/v1/me", headers=auth(tok), json={"date_of_birth": "1990-01-02"}).json()
-    assert u["onboarded"] is True and u["gender"] is None
+    assert client.patch("/v1/me", headers=auth(tok), json={"gender": "female"}).json()["gender"] == "female"
+    assert client.patch("/v1/me", headers=auth(tok), json={"gender": None}).json()["gender"] is None
 
 
 @pytest.mark.parametrize("body", [
@@ -232,4 +230,4 @@ def test_export_includes_setup_fields(client):
     tok = login(client)
     client.patch("/v1/me", headers=auth(tok), json={"first_name": "Asha", "last_name": "Verma", "date_of_birth": "1990-01-02"})
     acct = client.get("/v1/me/export", headers=auth(tok)).json()["account"]
-    assert acct["first_name"] == "Asha" and acct["date_of_birth"] == "1990-01-02" and acct["onboarded"] is True
+    assert acct["first_name"] == "Asha" and acct["date_of_birth"] == "1990-01-02"

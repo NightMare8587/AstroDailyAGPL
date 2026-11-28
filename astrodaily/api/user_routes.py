@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, timedelta
+from datetime import time as time_type
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,9 +8,13 @@ from sqlalchemy.orm import Session
 
 from ..auth.deps import get_current_user
 from ..db import get_db
-from ..models import Place, User, utcnow
+from ..config import get_settings
+from ..models import BirthProfile, Place, User, utcnow
 from ..ratelimit import limit
+from .birth import check_date, place_label, resolve_location
+from .profile_routes import settle_moon_sign
 from .schemas import UserOut
+from sqlalchemy import func, select
 
 router = APIRouter(prefix="/v1/me", tags=["me"],
                    dependencies=[Depends(limit("me", "rate_limit_default_per_minute"))])
@@ -40,7 +45,8 @@ class UserUpdate(BaseModel):
     @field_validator("date_of_birth")
     @classmethod
     def _dob(cls, v: date | None) -> date | None:
-        if v is not None and not (date(1900, 1, 1) <= v <= date.today()):
+        # One day of slack: this server runs on UTC, and in India the date is already tomorrow until 05:30.
+        if v is not None and not (date(1900, 1, 1) <= v <= date.today() + timedelta(days=1)):
             raise ValueError("date of birth must be between 1900 and today")
         return v
 
@@ -50,9 +56,8 @@ def get_me(user: User = Depends(get_current_user)) -> UserOut:
     return UserOut.from_user(user)
 
 
-@router.patch("", response_model=UserOut)
-def update_me(body: UserUpdate, user: User = Depends(get_current_user),
-              db: Session = Depends(get_db)) -> UserOut:
+def _apply_user_update(body: UserUpdate, user: User, db: Session) -> None:
+    """Change only the fields that were sent. Shared by PATCH /v1/me and POST /v1/me/setup."""
     if body.language is not None:
         user.language = body.language
     if body.consent_version is not None:
@@ -75,7 +80,57 @@ def update_me(body: UserUpdate, user: User = Depends(get_current_user),
             if place is None:
                 raise HTTPException(status_code=422, detail="Unknown place")
             user.home_place = place
+
+
+@router.patch("", response_model=UserOut)
+def update_me(body: UserUpdate, user: User = Depends(get_current_user),
+              db: Session = Depends(get_db)) -> UserOut:
+    _apply_user_update(body, user, db)
     db.commit()
+    return UserOut.from_user(user)
+
+
+class SetupIn(UserUpdate):
+    """The setup page after sign-in, saved in one step: the account details and the person's own birth profile.
+
+    first_name, last_name, date_of_birth and birth_place_id are required. consent_version is required the first time
+    (when the person has not agreed yet). birth_time is null when the person does not know it."""
+    first_name: str = Field(max_length=40)
+    last_name: str = Field(max_length=40)
+    date_of_birth: date
+    birth_place_id: int
+    birth_time: time_type | None = None
+    # Only needed when the time is unknown and the Moon changed sign on the birth date (see POST /v1/moon-sign).
+    moon_sign: int | None = Field(default=None, ge=1, le=12)
+
+
+@router.post("/setup", response_model=UserOut)
+def setup(body: SetupIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> UserOut:
+    """Save the setup page all at once, or not at all: consent, details, and the "Me" birth profile."""
+    if user.consented_at is None and body.consent_version is None:
+        raise HTTPException(status_code=422, detail="consent_version is required the first time")
+    check_date("date_of_birth", body.date_of_birth)
+    place = db.get(Place, body.birth_place_id)
+    if place is None:
+        raise HTTPException(status_code=422, detail="Unknown birth place")
+    _apply_user_update(body, user, db)
+    # The person's own profile is the oldest one, labelled "Me". Setting up again updates it.
+    mine = next((p for p in user.profiles if p.label == "Me"), None)
+    if mine is None:
+        count = db.scalar(select(func.count()).select_from(BirthProfile).where(BirthProfile.user_id == user.id))
+        if count >= get_settings().max_profiles_per_user:
+            raise HTTPException(status_code=409, detail="Profile limit reached. Delete one first.")
+        mine = BirthProfile(user_id=user.id, label="Me")
+        db.add(mine)
+    loc = resolve_location(db, place.id, None, None, None)
+    if mine.place_id != place.id:
+        mine.utc_offset_minutes = None  # an explicit UTC offset belongs to the old place; keep it only when the place is the same
+    mine.birth_date, mine.birth_time = body.date_of_birth, body.birth_time
+    mine.place_id, mine.place_name = place.id, place_label(place)
+    mine.latitude, mine.longitude, mine.timezone = loc.latitude, loc.longitude, loc.timezone
+    settle_moon_sign(mine, body.moon_sign)
+    db.commit()
+    db.refresh(user)
     return UserOut.from_user(user)
 
 

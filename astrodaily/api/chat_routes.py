@@ -14,7 +14,7 @@ from ..chat.llm import GeminiClient, LlmClient, LlmError
 from ..config import get_settings
 from ..db import get_db
 from ..horoscope.card import DISCLAIMER
-from ..models import BirthProfile, ChatConversation, User
+from ..models import BirthProfile, ChatConversation, User, primary_profile
 from ..ratelimit import limit
 from .profile_routes import require_consent
 
@@ -90,7 +90,7 @@ def create_conversation(body: ConversationIn, user: User = Depends(require_conse
     if body.profile_id is None:
         if not user.profiles:
             raise HTTPException(status_code=409, detail="Create a birth profile first (POST /v1/profiles).")
-        profile = user.profiles[0]
+        profile = primary_profile(user)
     else:
         profile = db.get(BirthProfile, body.profile_id)
         if profile is None or profile.user_id != user.id:

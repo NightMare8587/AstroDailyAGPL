@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from ..content.apply import localize
 from ..content.catalog import Catalog
 from ..horoscope import service
-from ..models import BirthProfile, NotificationLog, NotificationPrefs, User, utcnow
+from ..models import BirthProfile, NotificationLog, NotificationPrefs, User, primary_profile, utcnow
 from .message import daily_push
 from .sender import Sender
 
@@ -78,7 +78,7 @@ def run_once(db: Session, sender: Sender, catalog: Catalog, now: datetime | None
     ).all()
     for user in users:
         out.considered += 1
-        profile = user.profiles[0] if user.profiles else None
+        profile = primary_profile(user)
         devices = [d for d in user.devices if d.disabled_at is None]
         prefs = user.notification_prefs
         if profile is None or not devices or prefs is None:
@@ -102,9 +102,7 @@ def run_once(db: Session, sender: Sender, catalog: Catalog, now: datetime | None
         db.commit()  # the claim is durable before anything is sent
         try:
             loc = user_location(user, profile)
-            core = service.profile_card_core(
-                profile.birth_date, profile.birth_time, profile.latitude, profile.longitude, profile.timezone,
-                profile.utc_offset_minutes, day, loc.latitude, loc.longitude, loc.timezone)
+            core = service.personal_card_core(profile, day, loc.latitude, loc.longitude, loc.timezone)
             card, _ = localize(service.with_location(core, loc), catalog, user.language,
                                f"profile:{profile.id}:{day}")
             push = daily_push(card, user.language)

@@ -392,3 +392,25 @@ def test_api_export_omits_tokens_and_delete_account_removes_everything(client):
     with client.session_factory() as db:
         for model in (DeviceToken, NotificationPrefs, NotificationLog):
             assert db.scalar(select(func.count()).select_from(model)) == 0
+
+
+def test_a_profile_without_a_birth_time_still_gets_the_daily_message(db):
+    u = mk(db, profile=False)
+    db.add(BirthProfile(user_id=u.id, label="Me", birth_date=date(1990, 5, 15), birth_time=None, moon_sign=4,
+                        latitude=28.65, longitude=77.23, timezone="Asia/Kolkata", place_name="Delhi"))
+    db.commit()
+    s = FakeSender()
+    r = run(db, s, at(7, 35))
+    assert (r.sent, r.failed) == (1, 0) and s.calls[0][1].body
+
+
+def test_the_message_uses_the_profile_labelled_me_not_a_family_member(db):
+    u = mk(db, profile=False)
+    db.add(BirthProfile(user_id=u.id, label="Mom", birth_date=date(1960, 1, 1), birth_time=None, moon_sign=1,
+                        latitude=19.07, longitude=72.88, timezone="Asia/Kolkata", place_name="Mumbai"))
+    db.flush()
+    db.add(BirthProfile(user_id=u.id, label="Me", birth_date=date(1990, 5, 15), birth_time=None, moon_sign=9,
+                        latitude=28.65, longitude=77.23, timezone="Asia/Kolkata", place_name="Delhi"))
+    db.commit()
+    from astrodaily.models import primary_profile
+    assert primary_profile(db.get(User, u.id)).moon_sign == 9

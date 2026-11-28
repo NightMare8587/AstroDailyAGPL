@@ -32,18 +32,22 @@ def _hm(value: datetime, tz: str) -> str:
 def build_context(user: User, p: BirthProfile, day: date | None = None) -> str:
     loc = day_location(user, p)
     day = day or service.today_in(loc.timezone)
-    core = service.profile_card_core(p.birth_date, p.birth_time, p.latitude, p.longitude, p.timezone,
-                                     p.utc_offset_minutes, day, loc.latitude, loc.longitude, loc.timezone)
-    natal = _natal(p.birth_date, p.birth_time, p.latitude, p.longitude, p.timezone, p.utc_offset_minutes, day)
+    core = service.personal_card_core(p, day, loc.latitude, loc.longitude, loc.timezone)
     pan = core["panchang"]
-    dasha = natal.running_dasha or {}
+    if p.birth_time is None:
+        # No birth time: only the Moon sign is known, so there is no birth star, ascendant or running period.
+        person = (f"Moon sign (rashi) {zodiac.SIGNS[p.moon_sign - 1][0]}; birth time unknown, so the birth star, "
+                  "ascendant and running period are not known (do not guess them).")
+    else:
+        natal = _natal(p.birth_date, p.birth_time, p.latitude, p.longitude, p.timezone, p.utc_offset_minutes, day)
+        dasha = natal.running_dasha or {}
+        person = (f"Moon sign (rashi) {zodiac.SIGNS[natal.moon_sign - 1][0]}; "
+                  f"birth star (nakshatra) {names.NAKSHATRA[natal.moon_nakshatra - 1][0]}; "
+                  f"ascendant (lagna) {zodiac.SIGNS[natal.lagna_sign - 1][0]}; "
+                  f"running period (Vimshottari dasha) {dasha.get('mahadasha', 'unknown')} / {dasha.get('antardasha', 'unknown')}.")
     lines = [
         f"DATE: {day.isoformat()} ({pan['vara']['en']}), city: {loc.place_name or 'unknown'}.",
-        "PERSON (derived facts only): "
-        f"Moon sign (rashi) {zodiac.SIGNS[natal.moon_sign - 1][0]}; "
-        f"birth star (nakshatra) {names.NAKSHATRA[natal.moon_nakshatra - 1][0]}; "
-        f"ascendant (lagna) {zodiac.SIGNS[natal.lagna_sign - 1][0]}; "
-        f"running period (Vimshottari dasha) {dasha.get('mahadasha', 'unknown')} / {dasha.get('antardasha', 'unknown')}.",
+        "PERSON (derived facts only): " + person,
         f"TODAY: day score {core['score']} out of 5 (1 = go easy, 5 = very supportive). Area scores, also out of 5: "
         + ", ".join(f"{a['name']['en']} {a['score']}" for a in core["areas"]) + ".",
         "Suits today: " + (" | ".join(s["reason"] for s in core["dos"]) or "nothing notable") + ".",

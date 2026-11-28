@@ -7,6 +7,8 @@ from .api.horoscope_routes import feedback_router, me_router as horoscope_me_rou
 from .api.horoscope_routes import profile_router as horoscope_profile_router
 from .api.horoscope_routes import router as horoscope_router
 from .api.kundli_routes import router as kundli_router
+from .api.legal_routes import router as legal_router
+from .api.moonsign_routes import router as moonsign_router
 from .api.notification_routes import router as notification_router
 from .api.places_routes import router as places_router
 from .api.profile_routes import export_router, router as profile_router
@@ -27,6 +29,8 @@ app.include_router(notification_router)
 app.include_router(chat_router)
 app.include_router(places_router)
 app.include_router(kundli_router)
+app.include_router(legal_router)
+app.include_router(moonsign_router)
 app.include_router(profile_router)
 app.include_router(horoscope_router)
 app.include_router(feedback_router)

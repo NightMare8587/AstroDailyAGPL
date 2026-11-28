@@ -61,6 +61,15 @@ def profile_card_core(
     return build_card(report, panchang)
 
 
+def personal_card_core(profile, day: date, lat: float, lon: float, tz: str) -> dict[str, Any]:
+    """The card for a saved birth profile. With a birth time it is the full Level B card. Without one there is no
+    lagna or dasha, so it is the Moon-sign (Level A) card for the sign stored on the profile."""
+    if profile.birth_time is None:
+        return rashi_card_core(profile.moon_sign, day, lat, lon, tz)
+    return profile_card_core(profile.birth_date, profile.birth_time, profile.latitude, profile.longitude,
+                             profile.timezone, profile.utc_offset_minutes, day, lat, lon, tz)
+
+
 def with_location(core: dict[str, Any], loc: DayLocation) -> dict[str, Any]:
     """Attach the location without touching the cached dict."""
     return {**core, "location": {

@@ -19,7 +19,7 @@ from ..horoscope import service
 from ..horoscope.card import DISCLAIMER
 from ..horoscope.report import ENGINE_VERSION
 from ..horoscope.rules import RULESET_VERSION
-from ..models import BirthProfile, HoroscopeFeedback, User
+from ..models import BirthProfile, HoroscopeFeedback, User, primary_profile
 from ..ratelimit import limit
 from .birth import check_date, place_label, resolve_location
 from .profile_routes import _own_profile, require_consent
@@ -212,8 +212,7 @@ me_router = APIRouter(prefix="/v1/me", tags=["horoscope"],
 
 
 def _profile_card(p: BirthProfile, day: date_type, loc: service.DayLocation) -> dict[str, Any]:
-    return _compute(service.profile_card_core, p.birth_date, p.birth_time, p.latitude, p.longitude, p.timezone,
-                    p.utc_offset_minutes, day, loc.latitude, loc.longitude, loc.timezone)
+    return _compute(service.personal_card_core, p, day, loc.latitude, loc.longitude, loc.timezone)
 
 
 def _personal(p: BirthProfile, user: User, db: Session, date: date_type | None, place_id: int | None,
@@ -237,9 +236,10 @@ def profile_horoscope(
 
 
 def _first_profile(user: User) -> BirthProfile:
-    if not user.profiles:
+    profile = primary_profile(user)
+    if profile is None:
         raise HTTPException(status_code=404, detail="No birth profile yet. Create one with POST /v1/profiles.")
-    return user.profiles[0]  # the oldest, normally the user's own
+    return profile  # the one labelled "Me", else the oldest
 
 
 @me_router.get("/horoscope", response_model=HoroscopeOut)

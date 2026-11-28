@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime, time, timezone
 
 from sqlalchemy import (
-    Text, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, SmallInteger, String, Time, UniqueConstraint, Uuid,
+    CheckConstraint, Text, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, SmallInteger, String, Time, UniqueConstraint, Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -110,12 +110,19 @@ class BirthProfile(Base):
     """A person's birth details (the user's own, or a family member's). Personal data: it is deleted
     with the account, and only its owner can read it."""
     __tablename__ = "birth_profiles"
+    __table_args__ = (
+        # Without a birth time the Moon sign must be stored, or the daily card and chat have nothing to work from.
+        CheckConstraint("birth_time IS NOT NULL OR (moon_sign IS NOT NULL AND moon_sign BETWEEN 1 AND 12)", name="ck_birth_profiles_time_or_sign"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
     label: Mapped[str] = mapped_column(String(40))
     birth_date: Mapped[date] = mapped_column(Date)
-    birth_time: Mapped[time] = mapped_column(Time)
+    # Null when the person does not know their birth time. Then the Moon sign is stored in moon_sign
+    # (worked out from the date, or chosen by the person from the two possible signs).
+    birth_time: Mapped[time | None] = mapped_column(Time, nullable=True)
+    moon_sign: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     # The place is copied in, so a chart never changes if GeoNames data is later re-imported or the
     # place disappears. place_id is only a pointer back to the picked place.
     place_id: Mapped[int | None] = mapped_column(ForeignKey("places.id", ondelete="SET NULL"), nullable=True)
@@ -260,3 +267,9 @@ class ChatMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     conversation: Mapped[ChatConversation] = relationship(back_populates="messages")
+
+
+def primary_profile(user: "User") -> "BirthProfile | None":
+    """The person's own birth profile: the one labelled "Me", else the oldest. Used for their daily card, their chat
+    and their daily notification."""
+    return next((p for p in user.profiles if p.label == "Me"), user.profiles[0] if user.profiles else None)

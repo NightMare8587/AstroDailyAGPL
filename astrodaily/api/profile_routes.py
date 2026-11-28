@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from ..auth.deps import get_current_user
 from ..config import get_settings
 from ..db import get_db
+from ..calc import moonsign
 from ..models import BirthProfile, Place, User
 from ..ratelimit import limit
 from .birth import Location, check_date, place_label as _place_label, resolve_location
@@ -36,7 +37,10 @@ router = APIRouter(prefix="/v1/profiles", tags=["profiles"],
 class ProfileIn(BaseModel):
     label: str = Field("Me", min_length=1, max_length=40, description="Who this is, e.g. Me, Mom")
     birth_date: date_type
-    birth_time: time_type
+    # Leave out (null) when the person does not know their birth time. Then the Moon sign comes from the date;
+    # if the Moon changed sign that day, send the chosen one as moon_sign (see POST /v1/moon-sign).
+    birth_time: time_type | None = None
+    moon_sign: int | None = Field(None, ge=1, le=12)
     place_id: int | None = None
     lat: float | None = Field(None, ge=-66.0, le=66.0)
     lon: float | None = Field(None, ge=-180.0, le=180.0)
@@ -48,7 +52,8 @@ class ProfileUpdate(BaseModel):
     """Only the fields you send change. Changing the place needs place_id, or lat and lon."""
     label: str | None = Field(None, min_length=1, max_length=40)
     birth_date: date_type | None = None
-    birth_time: time_type | None = None
+    birth_time: time_type | None = None  # send null to say the time is not known
+    moon_sign: int | None = Field(None, ge=1, le=12)
     place_id: int | None = None
     lat: float | None = Field(None, ge=-66.0, le=66.0)
     lon: float | None = Field(None, ge=-180.0, le=180.0)
@@ -60,7 +65,11 @@ class ProfileOut(BaseModel):
     id: uuid.UUID
     label: str
     birth_date: date_type
-    birth_time: time_type
+    birth_time: time_type | None  # null when the birth time is not known
+    time_known: bool
+    moon_sign: int | None         # 1..12: worked out from the birth time, or chosen when the time is unknown
+    nakshatra: int | None         # 1..27, only with a birth time
+    pada: int | None
     place_id: int | None
     place_name: str | None
     latitude: float
@@ -72,9 +81,46 @@ class ProfileOut(BaseModel):
 
     @classmethod
     def from_profile(cls, p: BirthProfile) -> "ProfileOut":
-        return cls(id=p.id, label=p.label, birth_date=p.birth_date, birth_time=p.birth_time, place_id=p.place_id,
+        sign, nak, pada = profile_moon(p)
+        return cls(id=p.id, label=p.label, birth_date=p.birth_date, birth_time=p.birth_time,
+                   time_known=p.birth_time is not None, moon_sign=sign, nakshatra=nak, pada=pada, place_id=p.place_id,
                    place_name=p.place_name, latitude=p.latitude, longitude=p.longitude, timezone=p.timezone,
                    utc_offset_minutes=p.utc_offset_minutes, created_at=p.created_at, updated_at=p.updated_at)
+
+
+def profile_moon(p: BirthProfile) -> tuple[int | None, int | None, int | None]:
+    """(Moon sign, nakshatra, pada). Worked out from the birth time when there is one, else the stored sign."""
+    if p.birth_time is None:
+        return p.moon_sign, None, None
+    try:
+        m = moonsign.moon_at_birth(p.birth_date, p.birth_time, p.timezone, p.utc_offset_minutes)
+    except (ValueError, OverflowError):
+        return None, None, None
+    return m.sign, m.nakshatra, m.pada
+
+
+def settle_moon_sign(p: BirthProfile, chosen: int | None) -> None:
+    """Fill in the stored Moon sign for a profile without a birth time. With a time there is nothing to store.
+
+    The Moon is in one sign all day on about half of dates: then it is that sign. Otherwise the person must pick one
+    of the two possible signs, and anything else is refused with the two choices in the error."""
+    if p.birth_time is not None:
+        p.moon_sign = None
+        return
+    try:
+        cands = moonsign.candidate_signs(p.birth_date, p.timezone, p.utc_offset_minutes)
+    except (ValueError, OverflowError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    if len(cands) == 1:
+        p.moon_sign = cands[0]
+    elif chosen in cands:
+        p.moon_sign = chosen
+    elif chosen is None and p.moon_sign in cands:
+        pass  # an edit that did not change the answer: keep the earlier choice
+    else:
+        raise HTTPException(status_code=422, detail={
+            "message": "The birth time is unknown and the Moon changed sign that day: choose one of the two signs.",
+            "candidates": cands})
 
 
 def _apply_location(profile: BirthProfile, loc: Location) -> None:
@@ -101,6 +147,7 @@ def create_profile(body: ProfileIn, user: User = Depends(require_consent), db: S
     profile = BirthProfile(user_id=user.id, label=body.label, birth_date=body.birth_date,
                            birth_time=body.birth_time, utc_offset_minutes=body.utc_offset_minutes)
     _apply_location(profile, loc)
+    settle_moon_sign(profile, body.moon_sign)
     db.add(profile)
     db.commit()
     return ProfileOut.from_profile(profile)
@@ -126,12 +173,13 @@ def update_profile(profile_id: uuid.UUID, body: ProfileUpdate, user: User = Depe
     if "birth_date" in sent and body.birth_date is not None:
         check_date("birth_date", body.birth_date)
         profile.birth_date = body.birth_date
-    if "birth_time" in sent and body.birth_time is not None:
-        profile.birth_time = body.birth_time
+    if "birth_time" in sent:
+        profile.birth_time = body.birth_time  # null = the time is not known
     if sent & {"place_id", "lat", "lon", "tz"}:
         _apply_location(profile, resolve_location(db, body.place_id, body.lat, body.lon, body.tz))
     if "utc_offset_minutes" in sent:
         profile.utc_offset_minutes = body.utc_offset_minutes
+    settle_moon_sign(profile, body.moon_sign)  # the date, time or place may have changed the answer
     db.commit()
     return ProfileOut.from_profile(profile)
 
@@ -152,6 +200,9 @@ def profile_kundli(
 ) -> KundliOut:
     """The chart for a saved profile. Birth details stay on the server and out of the URL."""
     p = _own_profile(db, user, profile_id)
+    if p.birth_time is None:
+        raise HTTPException(status_code=409, detail="The birth time is not known, so a full chart (lagna, houses, "
+                                                    "dasha) cannot be calculated. Add the birth time first.")
     if as_of is not None:
         check_date("as_of", as_of)
     place = db.get(Place, p.place_id) if p.place_id else None
