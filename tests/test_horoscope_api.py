@@ -1,6 +1,8 @@
 from datetime import date, datetime, time, timezone
 
 import pytest
+
+from astrodaily.calc import zodiac
 from sqlalchemy import func, select
 
 from astrodaily.calc.kundli import compute_chart, resolve_birth_moment
@@ -148,8 +150,13 @@ def test_level_b_card_matches_the_engine_with_the_natal_chart(api):
     h = login(api)
     p = make_profile(api, h)
     c = api.get(f"/v1/profiles/{p['id']}/horoscope", headers=h, params={"date": DAY}).json()
-    assert c["level"] == "B" and c["subject"] == {"type": "profile", "rashi": None, "rashi_name": None,
+    # The subject carries the person's own Moon sign (here the natal Moon of 15 May 1990, 10:00, Delhi), so the app can
+    # show its name instead of "Your day".
+    assert c["level"] == "B" and c["subject"] == {"type": "profile", "rashi": p["moon_sign"],
+                                                   "rashi_name": {"en": zodiac.SIGNS[p["moon_sign"] - 1][0],
+                                                                  "hi": zodiac.SIGNS[p["moon_sign"] - 1][1]},
                                                    "profile_id": p["id"]}
+    assert 1 <= p["moon_sign"] <= 12
     noon = datetime(2025, 11, 5, 6, 30, tzinfo=timezone.utc)
     bm = resolve_birth_moment(date(1990, 5, 15), time(10, 0), "Asia/Kolkata", None)
     chart = compute_chart(bm, 28.65195, 77.23149, "mean", noon)

@@ -366,3 +366,17 @@ def test_setup_refuses_a_ninth_profile_when_the_limit_is_reached(api, monkeypatc
     finally:
         monkeypatch.delenv("MAX_PROFILES_PER_USER")
         get_settings.cache_clear()
+
+
+def test_the_personal_card_names_the_moon_sign_with_and_without_a_birth_time(api):
+    h = login(api); agree(api, h)
+    known = api.post("/v1/profiles", headers=h, json={"label": "Me", "birth_date": "1950-09-17", "birth_time": "11:00",
+                                                      "place_id": 1273294}).json()
+    card = api.get(f"/v1/profiles/{known['id']}/horoscope?date=2026-11-28", headers=h).json()
+    assert card["subject"]["rashi"] == 8 and card["subject"]["rashi_name"]["en"] == "Scorpio"
+    (d1, c1), _ = find_days()
+    unknown = api.post("/v1/profiles", headers=h, json={"label": "Dad", "birth_date": d1.isoformat(), "place_id": 1273294}).json()
+    card = api.get(f"/v1/profiles/{unknown['id']}/horoscope?date=2026-11-28", headers=h).json()
+    assert card["subject"]["rashi"] == c1[0] and card["subject"]["rashi_name"]["hi"]
+    mine = api.get("/v1/me/horoscope?date=2026-11-28", headers=h).json()  # the "Me" profile
+    assert mine["subject"]["rashi"] == 8

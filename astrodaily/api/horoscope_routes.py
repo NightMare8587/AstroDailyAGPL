@@ -22,7 +22,7 @@ from ..horoscope.rules import RULESET_VERSION
 from ..models import BirthProfile, HoroscopeFeedback, User, primary_profile
 from ..ratelimit import limit
 from .birth import check_date, place_label, resolve_location
-from .profile_routes import _own_profile, require_consent
+from .profile_routes import _own_profile, profile_moon, require_consent
 
 Lang = Literal["en", "hi"]
 
@@ -220,8 +220,10 @@ def _personal(p: BirthProfile, user: User, db: Session, date: date_type | None, 
     # Where is the person today? An explicit place, else their home city, else where they were born.
     loc = _explicit_location(db, place_id, lat, lon, tz) or _home_location(user) or _profile_location(p)
     day = _day(date, loc)
-    return _response(_profile_card(p, day, loc), loc, SubjectOut(type="profile", profile_id=p.id), lang, db,
-                     f"profile:{p.id}")
+    sign, _, _ = profile_moon(p)  # the person's Moon sign, so the app can show its name
+    subject = SubjectOut(type="profile", profile_id=p.id, rashi=sign,
+                         rashi_name=_rashi_subject(sign).rashi_name if sign else None)
+    return _response(_profile_card(p, day, loc), loc, subject, lang, db, f"profile:{p.id}")
 
 
 @profile_router.get("/{profile_id}/horoscope", response_model=HoroscopeOut)
