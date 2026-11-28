@@ -21,6 +21,11 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320))
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Filled in by the person on the setup page after sign-in (the Google name is only a suggestion).
+    first_name: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    gender: Mapped[str | None] = mapped_column(String(10), nullable=True)  # female | male | other; optional
     picture_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     language: Mapped[str] = mapped_column(String(2), default="en")  # "en" or "hi"
     # Consent to the privacy policy / data use. Null until the user accepts.

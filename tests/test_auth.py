@@ -174,3 +174,62 @@ def test_db_endpoints_503_without_database(monkeypatch):
     monkeypatch.setattr(get_settings(), "database_url", None)
     with TestClient(app) as c:
         assert c.post("/v1/auth/refresh", json={"refresh_token": "x"}).status_code == 503
+
+
+# ---- setup page fields: first name, last name, date of birth, gender
+
+def test_new_account_is_not_onboarded(client):
+    u = login(client)["user"]
+    assert u["onboarded"] is False
+    assert u["first_name"] is None and u["last_name"] is None and u["date_of_birth"] is None and u["gender"] is None
+
+
+def test_setup_fields_are_saved_and_onboard_the_account(client):
+    tok = login(client)
+    r = client.patch("/v1/me", headers=auth(tok), json={"first_name": "  Pulkit ", "last_name": "Sharma  Rao",
+                                                        "date_of_birth": "1996-08-14", "gender": "male"})
+    assert r.status_code == 200, r.text
+    u = r.json()
+    assert u["first_name"] == "Pulkit" and u["last_name"] == "Sharma Rao"  # trimmed, inner spaces collapsed
+    assert u["date_of_birth"] == "1996-08-14" and u["gender"] == "male" and u["onboarded"] is True
+    assert client.get("/v1/me", headers=auth(tok)).json()["onboarded"] is True
+
+
+def test_onboarded_needs_names_and_birth_date_but_not_gender(client):
+    tok = login(client)
+    u = client.patch("/v1/me", headers=auth(tok), json={"first_name": "Asha", "last_name": "Verma"}).json()
+    assert u["onboarded"] is False
+    u = client.patch("/v1/me", headers=auth(tok), json={"date_of_birth": "1990-01-02"}).json()
+    assert u["onboarded"] is True and u["gender"] is None
+
+
+@pytest.mark.parametrize("body", [
+    {"first_name": "   "},
+    {"last_name": ""},
+    {"first_name": "x" * 41},
+    {"date_of_birth": "2999-01-01"},
+    {"date_of_birth": "1899-12-31"},
+    {"date_of_birth": "not-a-date"},
+    {"gender": "robot"},
+])
+def test_setup_fields_reject_bad_values(client, body):
+    tok = login(client)
+    assert client.patch("/v1/me", headers=auth(tok), json=body).status_code == 422
+
+
+def test_names_and_birth_date_cannot_be_cleared_but_gender_can(client):
+    tok = login(client)
+    client.patch("/v1/me", headers=auth(tok), json={"first_name": "Asha", "last_name": "Verma",
+                                                    "date_of_birth": "1990-01-02", "gender": "female"})
+    u = client.patch("/v1/me", headers=auth(tok), json={"first_name": None, "date_of_birth": None, "gender": None}).json()
+    assert u["first_name"] == "Asha" and u["date_of_birth"] == "1990-01-02"  # null leaves them as they were
+    assert u["gender"] is None  # an explicit null clears the optional field
+    u = client.patch("/v1/me", headers=auth(tok), json={"language": "hi"}).json()
+    assert u["language"] == "hi" and u["first_name"] == "Asha"  # leaving a field out keeps it
+
+
+def test_export_includes_setup_fields(client):
+    tok = login(client)
+    client.patch("/v1/me", headers=auth(tok), json={"first_name": "Asha", "last_name": "Verma", "date_of_birth": "1990-01-02"})
+    acct = client.get("/v1/me/export", headers=auth(tok)).json()["account"]
+    assert acct["first_name"] == "Asha" and acct["date_of_birth"] == "1990-01-02" and acct["onboarded"] is True

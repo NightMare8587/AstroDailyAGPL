@@ -9,6 +9,7 @@ and not legal advice; a lawyer should review it and the policy text before real 
 | Data | Where | Why |
 |---|---|---|
 | Google account id, email, name, picture URL | `users` | Sign-in |
+| First name, last name, date of birth, gender (optional) | `users` | Setup page after sign-in; changeable, deleted and exported with the account |
 | Language, consent version and time, home place | `users` | App behaviour, proof of consent |
 | Refresh tokens (SHA-256 hash only) | `refresh_tokens` | Sessions |
 | Horoscope feedback: card (Moon sign or profile), date, thumbs up or down, optional "felt accurate" | `horoscope_feedback` | Tuning the rules and content. Removed with the account, and with the profile when it was a profile's card. |
