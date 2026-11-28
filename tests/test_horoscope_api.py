@@ -262,3 +262,45 @@ def test_export_includes_my_feedback_only(api):
     api.post("/v1/horoscope/feedback", headers=bob, json={"subject": "rashi:7", "date": DAY, "rating": -1})
     fb = api.get("/v1/me/export", headers=alice).json()["horoscope_feedback"]
     assert [(f["subject"], f["rating"], f["felt_accurate"]) for f in fb] == [("rashi:5", 1, True)]
+
+
+# ---------------------------------------------------------------- calendar (month view)
+
+def test_month_has_one_entry_per_day_with_score_tithi_and_special_days(client):
+    from test_daily_text import login, profile  # reuse the signed-in user + birth profile helpers
+    with client.session_factory() as db:
+        db.add(Place(id=1273294, name="Delhi", name_hi="दिल्ली", state="Delhi", district="Central Delhi",
+                     country_code="IN", latitude=28.65195, longitude=77.23149, population=11034555,
+                     timezone="Asia/Kolkata"))
+        db.commit()
+    h = login(client)
+    profile(client, h)
+    r = client.get("/v1/me/horoscope/month", headers=h, params={"month": "2026-11"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["month"] == "2026-11" and body["timezone"] == "Asia/Kolkata" and len(body["days"]) == 30
+    assert [d["date"] for d in body["days"]][:2] == ["2026-11-01", "2026-11-02"]
+    assert all(1 <= d["score"] <= 5 and 1 <= d["tithi"] <= 30 for d in body["days"])
+    assert all(d["tithi_name"]["en"] and d["tithi_name"]["hi"] for d in body["days"])
+    full = [d for d in body["days"] if d["moon"] == "full"]
+    new = [d for d in body["days"] if d["moon"] == "new"]
+    assert len(full) == 1 and full[0]["tithi"] == 15 and full[0]["special"] == "special_purnima"
+    assert len(new) <= 1 and all(d["tithi"] == 30 for d in new)
+    assert any(d["special"] == "special_ekadashi" for d in body["days"])
+    # a day's score matches that day's own card
+    d = body["days"][9]
+    card = client.get("/v1/me/horoscope", headers=h, params={"date": d["date"]}).json()
+    assert card["score"] == d["score"]
+    # December rolls the year correctly, and bad input is refused
+    assert len(client.get("/v1/me/horoscope/month", headers=h, params={"month": "2026-12"}).json()["days"]) == 31
+    assert client.get("/v1/me/horoscope/month", headers=h, params={"month": "2026-13"}).status_code == 422
+    assert client.get("/v1/me/horoscope/month", headers=h, params={"month": "1799-12"}).status_code == 422
+
+
+def test_month_needs_login_consent_and_a_profile(client):
+    from test_daily_text import login
+    assert client.get("/v1/me/horoscope/month", params={"month": "2026-11"}).status_code == 401
+    assert client.get("/v1/me/horoscope/month", headers=login(client, "nocons", consent=False),
+                      params={"month": "2026-11"}).status_code == 403
+    assert client.get("/v1/me/horoscope/month", headers=login(client, "noprofile"),
+                      params={"month": "2026-11"}).status_code == 404

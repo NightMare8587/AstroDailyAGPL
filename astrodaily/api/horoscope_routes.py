@@ -1,7 +1,7 @@
 """Daily horoscope cards: by Moon sign (public), per saved profile, and the signed-in user's own."""
 import uuid
 from datetime import date as date_type
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Literal
 
 import swisseph as swe
@@ -18,6 +18,7 @@ from ..db import get_db, get_optional_db
 from ..horoscope import service
 from ..horoscope.card import DISCLAIMER
 from ..horoscope.report import ENGINE_VERSION
+from ..horoscope import rules
 from ..horoscope.rules import RULESET_VERSION
 from ..models import BirthProfile, HoroscopeFeedback, User, primary_profile
 from ..ratelimit import limit
@@ -271,6 +272,51 @@ def my_horoscope_widget(
                           card.windows.avoid[0] if card.windows.avoid else None),
         timezone=card.location.timezone, text_language=card.text_language,
     )
+
+
+# ---------------------------------------------------------------- calendar
+
+class CalendarDayOut(BaseModel):
+    date: date_type
+    score: int                       # 1..5, the same score as that day's card
+    tithi: int                       # 1..30 (15 = Purnima, 30 = Amavasya)
+    tithi_name: Named
+    paksha: Literal["shukla", "krishna"]
+    moon: Literal["full", "new"] | None   # full or new moon day
+    special: str | None              # special_ekadashi, special_pradosh, special_sankashti, special_purnima
+
+
+class CalendarOut(BaseModel):
+    month: str                       # YYYY-MM
+    timezone: str
+    days: list[CalendarDayOut]
+
+
+@me_router.get("/horoscope/month", response_model=CalendarOut)
+def my_calendar(
+    month: str = Query(..., pattern=r"^\d{4}-(0[1-9]|1[0-2])$", description="YYYY-MM"),
+    user: User = Depends(require_consent), db: Session = Depends(get_db),
+) -> CalendarOut:
+    """One short entry per day of the month for the signed-in user's own chart: the day's score, the tithi and the
+    special days. Open a day with GET /v1/me/horoscope?date= for the full card."""
+    p = _first_profile(user)
+    loc = _home_location(user) or _profile_location(p)
+    year, mon = int(month[:4]), int(month[5:])
+    first = date_type(year, mon, 1)
+    last = date_type(year + (mon == 12), mon % 12 + 1, 1)
+    check_date("month", first)
+    check_date("month", last - timedelta(days=1))
+    days = []
+    for n in range((last - first).days):
+        day = first + timedelta(days=n)
+        core = _compute(service.personal_card_core, p, day, loc.latitude, loc.longitude, loc.timezone)
+        tithi = core["panchang"]["tithi"]
+        num = tithi["number"]
+        special = rules.SPECIAL_TITHI_DAYS[num][0] if num in rules.SPECIAL_TITHI_DAYS else None
+        days.append(CalendarDayOut(
+            date=day, score=core["score"], tithi=num, tithi_name=Named(en=tithi["en"], hi=tithi["hi"]),
+            paksha=tithi["paksha"], moon="full" if num == 15 else "new" if num == 30 else None, special=special))
+    return CalendarOut(month=month, timezone=loc.timezone, days=days)
 
 
 # ---------------------------------------------------------------- feedback
