@@ -241,6 +241,13 @@ def test_the_prompt_asks_for_named_texts_not_a_standard_rule():
     assert '"standard"' in system_prompt("en", "CTX") and "name the text" in system_prompt("en", "CTX")
 
 
+def test_the_prompt_only_sends_people_to_a_professional_when_the_question_is_about_one():
+    from astrodaily.chat.prompt import system_prompt
+    text = " ".join(system_prompt("en", "CTX").split())
+    assert "Only when the person's question is itself about a health, legal, or money decision" in text
+    assert "otherwise do not mention professionals or advice at all" in text
+
+
 # ---------------------------------------------------------------- access rules
 
 def test_requires_login_and_consent(api):
