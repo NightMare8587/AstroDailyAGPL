@@ -4,7 +4,7 @@ Status: re-imported on production 2026-11-28 with spelling-tolerant Hindi search
 
 ## What is stored
 `places` (one row per GeoNames populated place in India, about 558,000) and `place_names` (normalised search names,
-about 585,000). Data: GeoNames, CC BY 4.0, credited in the API response and in the app.
+about 585,000). Data: GeoNames, CC BY 4.0, credited in the API response. **The app no longer shows the credit (removed on request, 2026-11-28). CC BY requires attribution somewhere reasonable, so add it to the Terms or Privacy page or an About screen before launch.**
 
 ## How Hindi search works
 - The importer keeps **every** Hindi name GeoNames has for a place (up to 6, preferred first) and puts them right after
