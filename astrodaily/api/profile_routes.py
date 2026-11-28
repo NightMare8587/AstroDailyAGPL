@@ -251,6 +251,7 @@ class ChatMessageExport(BaseModel):
 class ChatExport(BaseModel):
     id: str
     title: str | None
+    summary: str | None = None
     created_at: datetime
     messages: list[ChatMessageExport]
 
@@ -303,7 +304,7 @@ def export_my_data(user: User = Depends(get_current_user)) -> ExportOut:
                                                         felt_accurate=f.felt_accurate, created_at=f.created_at)
                                          for f in user.feedback],
                      notifications=_notifications_export(user),
-                     chats=[ChatExport(id=str(c.id), title=c.title, created_at=c.created_at,
+                     chats=[ChatExport(id=str(c.id), title=c.title, summary=c.summary, created_at=c.created_at,
                                        messages=[ChatMessageExport(role=m.role, text=m.text, created_at=m.created_at)
                                                  for m in c.messages]) for c in user.conversations],
                      daily_horoscopes=[DailyHoroscopeExport(date=h.local_date, lang=h.lang, text=h.text,

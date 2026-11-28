@@ -255,6 +255,9 @@ class ChatConversation(Base):
     profile_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("birth_profiles.id", ondelete="CASCADE"), nullable=True, index=True)
     title: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    # Older messages are folded into this short summary so the model keeps the thread without an ever-growing prompt.
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    summarized_through: Mapped[int | None] = mapped_column(Integer, nullable=True)  # last message id inside the summary
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

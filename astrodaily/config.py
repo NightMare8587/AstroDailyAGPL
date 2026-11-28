@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     chat_daily_message_limit: int = 30        # user messages per rolling 24 hours, per account
     chat_max_message_chars: int = 1000
     chat_history_messages: int = 12           # most recent messages sent to the model as history
+    chat_compact_keep_messages: int = 4       # when history reaches the limit, older messages are summarised and this many stay
     chat_max_output_tokens: int = 600
     chat_timeout_seconds: int = 30
     chat_max_conversations: int = 50          # per account; the oldest are not auto-deleted, new ones are refused

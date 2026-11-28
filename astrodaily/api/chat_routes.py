@@ -1,9 +1,11 @@
 """AI chat with the guide. Personal data: consent required, owner only, deleted with the account."""
+import json
 import uuid
 from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -135,6 +137,54 @@ def send_message(conv_id: uuid.UUID, body: MessageIn, user: User = Depends(requi
         raise HTTPException(status_code=503, detail="The guide is unavailable right now. Please try again shortly.")
     return ReplyOut(reply=_msg_out(reply), remaining_today=max(0, s.chat_daily_message_limit - chat.messages_today(db, user)),
                     disclaimer=dict(DISCLAIMER))
+
+
+def _sse(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+@router.post("/conversations/{conv_id}/messages/stream")
+def send_message_stream(conv_id: uuid.UUID, body: MessageIn, user: User = Depends(require_consent),
+                        db: Session = Depends(get_db), client: LlmClient | None = Depends(get_llm_client)):
+    """Same as POST .../messages, but the reply arrives as server-sent events while the model writes it:
+    ``delta`` {text} (more text), ``replace`` {text} (the finished answer was swapped by the tone check or is a fixed
+    safety answer), ``done`` {reply, remaining_today, disclaimer}, or ``error`` {status} if it breaks off (nothing is
+    stored then). Problems found before the first word use the same status codes as the plain endpoint."""
+    s = get_settings()
+    conv = _own(db, user, conv_id)
+    text = body.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="Message is empty")
+    if len(text) > s.chat_max_message_chars:
+        raise HTTPException(status_code=422, detail=f"Message is longer than {s.chat_max_message_chars} characters")
+    lang = body.lang or ("hi" if user.language == "hi" else "en")
+    events = chat.respond_stream(db, user, conv, text, lang, client)
+    try:
+        first = next(events)  # fails here, before any output, when the cap is reached or the model is unavailable
+    except chat.DailyLimitReached:
+        raise HTTPException(status_code=429, detail="Daily message limit reached. Please come back tomorrow.")
+    except LlmError:
+        raise HTTPException(status_code=503, detail="The guide is unavailable right now. Please try again shortly.")
+
+    def frames():
+        pending = first
+        while True:
+            kind, value = pending
+            if kind == "done":
+                yield _sse("done", {"reply": _msg_out(value).model_dump(mode="json"),
+                                    "remaining_today": max(0, s.chat_daily_message_limit - chat.messages_today(db, user)),
+                                    "disclaimer": dict(DISCLAIMER)})
+            else:
+                yield _sse(kind, {"text": value})
+            try:
+                pending = next(events)
+            except StopIteration:
+                return
+            except (LlmError, chat.DailyLimitReached):
+                yield _sse("error", {"status": 503})
+                return
+
+    return StreamingResponse(frames(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @router.delete("/conversations/{conv_id}", status_code=204)

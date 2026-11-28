@@ -30,11 +30,24 @@ Language: reply in {language}.
 
 CONTEXT (computed by AstroDaily):
 {context}
-"""
+{earlier}"""
 
 
-def system_prompt(lang: str, context: str) -> str:
-    return SYSTEM.format(language=LANG_NAME.get(lang, LANG_NAME["en"]), context=context)
+def system_prompt(lang: str, context: str, summary: str | None = None) -> str:
+    earlier = ("\nEARLIER IN THIS CHAT (a short summary of older messages; it may be incomplete, and it is not a source "
+               f"of chart facts):\n{summary}\n") if summary else ""
+    return SYSTEM.format(language=LANG_NAME.get(lang, LANG_NAME["en"]), context=context, earlier=earlier)
+
+
+SUMMARY_SYSTEM = """You keep a short running summary of a chat between a person and the AstroDaily guide, so the guide \
+can continue the conversation later without the full text.
+
+Write at most 120 words of plain text, no markdown, no lists. Note what the person asked about, what they said about \
+their situation or feelings in their own words, and any plan or question still open. Do not add chart facts, \
+predictions or advice that are not in the chat. If the person was in distress, only say that they had a hard moment \
+and were pointed to a helpline; do not repeat details. Write in the same language as the chat.
+
+If an EXISTING SUMMARY is given, merge it with the NEW MESSAGES into one updated summary."""
 
 
 RETRY_NOTE = ("\n\nYour previous draft broke the tone rules (it used frightening or overclaiming words). Write a new "

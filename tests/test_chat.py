@@ -1,4 +1,5 @@
 import json
+import uuid
 from datetime import date
 
 import pytest
@@ -7,6 +8,7 @@ from sqlalchemy import func, select
 from astrodaily.api.chat_routes import get_llm_client
 from astrodaily.chat import safety
 from astrodaily.chat.context import build_context
+from astrodaily.chat.prompt import SUMMARY_SYSTEM
 from astrodaily.chat.llm import GeminiClient, LlmError, LlmResult, Turn
 from astrodaily.config import get_settings
 from astrodaily.main import app
@@ -26,6 +28,12 @@ class FakeLlm:
         text = self.replies.pop(0) if len(self.replies) > 1 else self.replies[0]
         return LlmResult(text=text, tokens_in=100, tokens_out=20, model="fake-model")
 
+    def stream(self, system, turns):
+        result = self.generate(system, turns)
+        yield result.text[:5]
+        yield result.text[5:]
+        yield result
+
 
 class FakeResp:
     def __init__(self, status=200, body=None):
@@ -36,12 +44,17 @@ class FakeResp:
             raise ValueError
         return self._body
 
+    def iter_lines(self, decode_unicode=False):
+        for chunk in self._body:
+            yield "data: " + json.dumps(chunk)
+            yield ""
+
 
 class FakeSession:
     def __init__(self, resp=None, exc=None):
         self.resp, self.exc, self.posts = resp, exc, []
 
-    def post(self, url, json=None, timeout=None, headers=None):
+    def post(self, url, json=None, timeout=None, headers=None, stream=False):
         self.posts.append((url, json, headers))
         if self.exc:
             raise self.exc
@@ -387,3 +400,139 @@ def test_deleting_the_account_removes_all_chat_data(ready):
     with api.session_factory() as db:
         assert db.scalar(select(func.count(ChatConversation.id))) == 0
         assert db.scalar(select(func.count(ChatMessage.id))) == 0
+
+
+# ---------------------------------------------------------------- streaming and compaction
+
+def sse(response):
+    """The events of a server-sent-events body as (name, data) pairs."""
+    out = []
+    for block in response.text.strip().split("\n\n"):
+        name, data = block.split("\n")
+        out.append((name.removeprefix("event: "), json.loads(data.removeprefix("data: "))))
+    return out
+
+
+def stream(client, h, cid, text="What suits today?", **extra):
+    return client.post(f"/v1/chat/conversations/{cid}/messages/stream", headers=h, json={"text": text, **extra})
+
+
+def test_gemini_stream_yields_pieces_then_the_whole_answer():
+    chunks = [ok_body("Hello "), ok_body("there", usage=False), {"usageMetadata": {"promptTokenCount": 11, "candidatesTokenCount": 7}}]
+    c, s = gemini(FakeResp(200, chunks))
+    out = list(c.stream("SYS", [Turn("user", "hi")]))
+    assert out[:2] == ["Hello ", "there"] and out[2] == LlmResult("Hello there", 11, 7, "gemini-test")
+    url, _, headers = s.posts[0]
+    assert url.endswith(":streamGenerateContent?alt=sse") and "SECRET-KEY-123" not in url
+
+
+def test_gemini_stream_failures_become_llm_error():
+    for resp, exc in [(FakeResp(500, []), None), (FakeResp(200, [{"candidates": []}]), None), (None, TimeoutError())]:
+        c, _ = gemini(resp, exc)
+        with pytest.raises(LlmError):
+            list(c.stream("SYS", [Turn("user", "hi")]))
+
+
+def test_stream_endpoint_sends_pieces_then_done_and_stores_the_reply(ready):
+    api, h = ready
+    use_llm(FakeLlm("First answer."))
+    cid = convo(api, h)
+    r = stream(api, h, cid)
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/event-stream")
+    events = sse(r)
+    assert [e[0] for e in events] == ["delta", "delta", "done"]
+    assert events[0][1]["text"] + events[1][1]["text"] == "First answer."
+    done = events[2][1]
+    assert done["reply"]["text"] == "First answer." and done["reply"]["source"] == "model"
+    assert done["remaining_today"] == 29 and "disclaimer" in done
+    d = api.get(f"/v1/chat/conversations/{cid}", headers=h).json()
+    assert [m["role"] for m in d["messages"]] == ["user", "assistant"]
+
+
+def test_stream_endpoint_problems_before_the_first_word_use_plain_status_codes(ready, monkeypatch):
+    api, h = ready
+    cid = convo(api, h)
+    use_llm(FakeLlm(error=LlmError("down")))
+    assert stream(api, h, cid).status_code == 503
+    assert api.get(f"/v1/chat/conversations/{cid}", headers=h).json()["messages"] == []  # nothing stored
+    use_llm(FakeLlm())
+    assert stream(api, h, cid, "   ").status_code == 422
+    monkeypatch.setenv("CHAT_DAILY_MESSAGE_LIMIT", "1")
+    get_settings.cache_clear()
+    try:
+        assert stream(api, h, cid).status_code == 200
+        assert stream(api, h, cid).status_code == 429
+    finally:
+        get_settings.cache_clear()
+
+
+def test_stream_endpoint_crisis_gets_the_fixed_answer_without_the_model(ready):
+    api, h = ready
+    llm = use_llm(FakeLlm())
+    cid = convo(api, h)
+    events = sse(stream(api, h, cid, "I want to end my life"))
+    assert [e[0] for e in events] == ["replace", "done"] and "14416" in events[0][1]["text"]
+    assert events[1][1]["reply"]["source"] == "safety" and llm.calls == []
+
+
+def test_stream_endpoint_swaps_an_answer_that_breaks_the_tone_rules(ready):
+    api, h = ready
+    use_llm(FakeLlm("You will surely die."))  # on both the stream and the retry
+    cid = convo(api, h)
+    events = sse(stream(api, h, cid))
+    assert [e[0] for e in events][-2:] == ["replace", "done"]
+    assert events[-1][1]["reply"]["source"] == "fallback" and events[-2][1]["text"] == events[-1][1]["reply"]["text"]
+
+
+def test_a_full_history_is_folded_into_a_summary_and_the_summary_goes_to_the_model(ready, monkeypatch):
+    monkeypatch.setenv("CHAT_HISTORY_MESSAGES", "4")
+    monkeypatch.setenv("CHAT_COMPACT_KEEP_MESSAGES", "2")
+    get_settings.cache_clear()
+    try:
+        api, h = ready
+        llm = use_llm(FakeLlm("A1", "A2", "THE SUMMARY", "A3", "SECOND SUMMARY"))
+        cid = convo(api, h)
+        say(api, h, cid, "first question")
+        assert len(llm.calls) == 1  # four messages not reached yet: no summary call
+        say(api, h, cid, "second question")  # now 4 messages: the first two are folded into the summary
+        assert len(llm.calls) == 3
+        summary_system, summary_turns = llm.calls[2]
+        assert summary_system == SUMMARY_SYSTEM
+        assert "Person: first question" in summary_turns[0].text and "Guide: A1" in summary_turns[0].text
+        assert "second question" not in summary_turns[0].text  # the latest two stay as they are
+        say(api, h, cid, "third question")
+        system, turns = llm.calls[3]
+        assert "EARLIER IN THIS CHAT" in system and "THE SUMMARY" in system
+        assert [t.text for t in turns] == ["second question", "A2", "third question"]
+        with api.session_factory() as db:
+            conv = db.get(ChatConversation, uuid.UUID(cid))
+            # the third turn filled the history again, so the summary was refreshed (it now includes the first one)
+            assert conv.summary == "SECOND SUMMARY" and conv.summarized_through is not None
+        assert "THE SUMMARY" in llm.calls[4][1][0].text
+        export = api.get("/v1/me/export", headers=h).json()
+        assert export["chats"][0]["summary"] == "SECOND SUMMARY"
+    finally:
+        get_settings.cache_clear()
+
+
+def test_a_failed_summary_changes_nothing_and_the_chat_carries_on(ready, monkeypatch):
+    monkeypatch.setenv("CHAT_HISTORY_MESSAGES", "2")
+    monkeypatch.setenv("CHAT_COMPACT_KEEP_MESSAGES", "0")
+    get_settings.cache_clear()
+    try:
+        api, h = ready
+
+        class SummaryFails(FakeLlm):
+            def generate(self, system, turns):
+                if system == SUMMARY_SYSTEM:
+                    raise LlmError("down")
+                return super().generate(system, turns)
+
+        use_llm(SummaryFails("Fine."))
+        cid = convo(api, h)
+        assert say(api, h, cid, "one").status_code == 200  # reaches the limit, the summary fails quietly
+        assert say(api, h, cid, "two").status_code == 200
+        with api.session_factory() as db:
+            assert db.get(ChatConversation, uuid.UUID(cid)).summary is None
+    finally:
+        get_settings.cache_clear()
