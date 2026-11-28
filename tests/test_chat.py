@@ -12,7 +12,7 @@ from astrodaily.chat.prompt import SUMMARY_SYSTEM
 from astrodaily.chat.llm import GeminiClient, LlmError, LlmResult, Turn
 from astrodaily.config import get_settings
 from astrodaily.main import app
-from astrodaily.models import BirthProfile, ChatConversation, ChatMessage, Place, User
+from astrodaily.models import BirthProfile, ChatConversation, ChatMessage, ChatUsage, Place, User
 
 
 # ---------------------------------------------------------------- fakes
@@ -542,5 +542,25 @@ def test_a_failed_summary_changes_nothing_and_the_chat_carries_on(ready, monkeyp
         assert say(api, h, cid, "two").status_code == 200
         with api.session_factory() as db:
             assert db.get(ChatConversation, uuid.UUID(cid)).summary is None
+    finally:
+        get_settings.cache_clear()
+
+
+def test_deleting_a_chat_does_not_give_the_daily_messages_back(ready, monkeypatch):
+    monkeypatch.setenv("CHAT_DAILY_MESSAGE_LIMIT", "2")
+    get_settings.cache_clear()
+    try:
+        api, h = ready
+        use_llm(FakeLlm())
+        cid = convo(api, h)
+        assert say(api, h, cid, "one").json()["remaining_today"] == 1
+        assert say(api, h, cid, "two").json()["remaining_today"] == 0
+        assert api.delete(f"/v1/chat/conversations/{cid}", headers=h).status_code == 204
+        fresh = convo(api, h)
+        assert say(api, h, fresh, "three").status_code == 429  # clearing the chat did not reset the limit
+        # and deleting the account removes the log with everything else
+        assert api.delete("/v1/me", headers=h).status_code == 204
+        with api.session_factory() as db:
+            assert db.scalar(select(func.count(ChatUsage.id))) == 0
     finally:
         get_settings.cache_clear()

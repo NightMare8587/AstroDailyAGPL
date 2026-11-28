@@ -66,6 +66,7 @@ class User(Base):
     love_readings: Mapped[list["LoveReading"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     planet_cards: Mapped[list["DailyPlanetCards"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     match_summaries: Mapped[list["MatchSummary"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    chat_usage: Mapped[list["ChatUsage"]] = relationship(cascade="all, delete-orphan")
 
 
 class RefreshToken(Base):
@@ -265,6 +266,16 @@ class ChatConversation(Base):
     profile: Mapped["BirthProfile | None"] = relationship(back_populates="conversations")
     messages: Mapped[list["ChatMessage"]] = relationship(
         back_populates="conversation", cascade="all, delete-orphan", order_by="ChatMessage.created_at, ChatMessage.id")
+
+
+class ChatUsage(Base):
+    """One row per message a person sent to the guide: only who and when, never the text. The daily limit counts these,
+    so deleting a chat (or a profile) cannot reset it. Removed with the account."""
+    __tablename__ = "chat_usage"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
 
 class ChatMessage(Base):

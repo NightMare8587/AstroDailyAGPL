@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..models import BirthProfile, ChatConversation, ChatMessage, User
+from ..models import BirthProfile, ChatConversation, ChatMessage, ChatUsage, User
 from .context import build_context
 from .llm import LlmClient, LlmError, LlmResult, Turn
 from .prompt import RETRY_NOTE, SUMMARY_SYSTEM, system_prompt
@@ -23,10 +23,8 @@ class DailyLimitReached(Exception):
 
 def messages_today(db: Session, user: User, now: datetime | None = None) -> int:
     since = (now or datetime.now(timezone.utc)) - timedelta(hours=24)
-    return db.scalar(
-        select(func.count(ChatMessage.id)).join(ChatConversation, ChatMessage.conversation_id == ChatConversation.id)
-        .where(ChatConversation.user_id == user.id, ChatMessage.role == "user", ChatMessage.created_at >= since)
-    ) or 0
+    # Counted from a log that is not part of any chat, so clearing a chat does not give the messages back.
+    return db.scalar(select(func.count(ChatUsage.id)).where(ChatUsage.user_id == user.id, ChatUsage.created_at >= since)) or 0
 
 
 def _title(text: str) -> str:
@@ -78,6 +76,7 @@ def _store(db: Session, conv: ChatConversation, text: str, lang: str, reply: str
            result: LlmResult | None) -> ChatMessage:
     now = datetime.now(timezone.utc)
     conv.messages.append(ChatMessage(role="user", text=text, lang=lang, source="user", created_at=now))
+    db.add(ChatUsage(user_id=conv.user_id, created_at=now))
     msg = ChatMessage(role="assistant", text=reply, lang=lang, source=source, model=result.model if result else None,
                       tokens_in=result.tokens_in if result else None, tokens_out=result.tokens_out if result else None,
                       created_at=now + timedelta(microseconds=1))

@@ -19,7 +19,8 @@ fact; the model only phrases and explains them.** No human astrologer.
 ## How a turn works
 1. **Crisis check** (English and Hindi patterns). A match returns a fixed caring reply with Tele-MANAS 14416 and 112,
    never calls the model, and is allowed even when the daily cap is used up.
-2. **Daily cap**: 30 user messages per rolling 24 hours per account (`CHAT_DAILY_MESSAGE_LIMIT`).
+2. **Daily cap**: 30 user messages per rolling 24 hours per account (`CHAT_DAILY_MESSAGE_LIMIT`). It is counted from `chat_usage` (who and when, no text), not from the chats, so
+   deleting a chat or a profile does not give the messages back.
 3. **Context** from the engine (`chat/context.py`): derived facts and today's card. No personal details.
 4. **Prompt** (`chat/prompt.py`): facts only from the context, tendencies not guarantees, no medical, legal or
    financial advice, no frightening predictions, no remedies that cost money, reply in the person's language, treat
