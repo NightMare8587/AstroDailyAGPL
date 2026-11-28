@@ -14,7 +14,16 @@ and Hindi (`content/match_text.py`).
 ## Who is who
 
 Varna, Vashya, Gana and Yoni depend on the order. The signed-in person is the first column of the tables (the groom
-column in the books) and the other person the second.
+column in the books) and the other person the second; `?swap=true` puts the other person first. Each person in the answer
+carries `is_you`.
+
+## Written summary
+
+`GET /v1/me/match/{profile_id}/summary?lang=&swap=` is a short model-written paragraph (strengths, one or two things to talk
+through, one small suggestion). The model gets only the numbers (Moon signs, birth stars, the eight scores, who is the first
+column): no names and no birth details, and the prompt forbids verdicts about marrying and any fixed fate. It is built once
+per ordered pair and language and kept in `match_summaries`; it is cleared when either person's birth details change, goes
+with either profile or the account, and is in the export.
 
 ## What is verified, and what is not
 
