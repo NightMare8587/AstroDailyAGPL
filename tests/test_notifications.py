@@ -350,6 +350,16 @@ def test_api_set_prefs_and_register_device(client):
     assert "token" not in json.dumps(d)  # tokens never come back out
 
 
+def test_api_transit_alert_switch_is_off_by_default_and_separate_from_the_daily_one(client):
+    h = login(client)
+    assert client.get("/v1/me/notifications", headers=h).json()["transit_enabled"] is False
+    d = client.put("/v1/me/notifications", headers=h, json={"transit_enabled": True}).json()
+    assert d["transit_enabled"] is True and d["daily_enabled"] is False
+    d = client.put("/v1/me/notifications", headers=h, json={"daily_enabled": True}).json()
+    assert d["transit_enabled"] is True  # changing one switch leaves the other alone
+    assert client.get("/v1/me/export", headers=h).json()["notifications"]["transit_enabled"] is True
+
+
 def test_api_rejects_bad_input(client):
     h = login(client)
     assert client.post("/v1/me/devices", headers=h, json={"token": "short", "platform": "android"}).status_code == 422

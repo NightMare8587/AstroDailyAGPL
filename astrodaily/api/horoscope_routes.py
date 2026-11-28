@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..auth.deps import get_current_user, get_optional_user
-from ..calc import zodiac
+from ..calc import festivals, zodiac
 from ..content import catalog as content_catalog
 from ..content.apply import localize
 from ..db import get_db, get_optional_db
@@ -290,6 +290,7 @@ class CalendarDayOut(BaseModel):
     paksha: Literal["shukla", "krishna"]
     moon: Literal["full", "new"] | None   # full or new moon day
     special: str | None              # special_ekadashi, special_pradosh, special_sankashti, special_purnima
+    festivals: list[Named]           # festivals on this day, English and Hindi names
 
 
 class CalendarOut(BaseModel):
@@ -312,6 +313,7 @@ def my_calendar(
     last = date_type(year + (mon == 12), mon % 12 + 1, 1)
     check_date("month", first)
     check_date("month", last - timedelta(days=1))
+    fest = _compute(festivals.festival_days, first, last - timedelta(days=1), loc.latitude, loc.longitude, loc.timezone)
     days = []
     for n in range((last - first).days):
         day = first + timedelta(days=n)
@@ -321,7 +323,8 @@ def my_calendar(
         special = rules.SPECIAL_TITHI_DAYS[num][0] if num in rules.SPECIAL_TITHI_DAYS else None
         days.append(CalendarDayOut(
             date=day, score=core["score"], tithi=num, tithi_name=Named(en=tithi["en"], hi=tithi["hi"]),
-            paksha=tithi["paksha"], moon="full" if num == 15 else "new" if num == 30 else None, special=special))
+            paksha=tithi["paksha"], moon="full" if num == 15 else "new" if num == 30 else None, special=special,
+            festivals=[Named(en=f.en, hi=f.hi) for f in fest.get(day, [])]))
     return CalendarOut(month=month, timezone=loc.timezone, days=days)
 
 

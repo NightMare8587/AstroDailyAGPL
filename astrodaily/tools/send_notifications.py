@@ -1,4 +1,4 @@
-"""Send the daily push messages that are due now.
+"""Send the push messages that are due now: the daily card and the planet change alerts.
 
     python -m astrodaily.tools.send_notifications [--dry-run]
 
@@ -17,6 +17,7 @@ from ..content.catalog import load_catalog
 from ..db import normalize_database_url
 from ..notify.dispatch import run_once
 from ..notify.sender import LogSender, make_sender
+from ..notify.transit import run_transit_once
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,8 +33,10 @@ def main(argv: list[str] | None = None) -> int:
     engine = create_engine(normalize_database_url(s.database_url))
     with Session(engine) as db:
         res = run_once(db, sender, load_catalog(db), max_late_minutes=s.notify_max_late_minutes, dry_run=args.dry_run)
+        alerts = run_transit_once(db, sender, max_late_minutes=s.notify_max_late_minutes, dry_run=args.dry_run)
     print(res)
-    return 1 if res.errors else 0
+    print("transit alerts:", alerts)
+    return 1 if res.errors or alerts.errors else 0
 
 
 if __name__ == "__main__":

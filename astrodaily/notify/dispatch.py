@@ -48,14 +48,14 @@ def due_local_date(user: User, prefs: NotificationPrefs, profile: BirthProfile, 
     return local_now.date() if timedelta(0) <= local_now - target <= max_late else None
 
 
-def _claim(db: Session, user: User, day: date) -> bool:
+def claim(db: Session, user: User, day: date, kind: str = KIND) -> bool:
     """Take the right to send this user's message for this day. False if someone else already has it."""
     row = db.scalar(select(NotificationLog).where(
-        NotificationLog.user_id == user.id, NotificationLog.kind == KIND, NotificationLog.local_date == day))
+        NotificationLog.user_id == user.id, NotificationLog.kind == kind, NotificationLog.local_date == day))
     if row is None:
         try:
             with db.begin_nested():
-                db.add(NotificationLog(user_id=user.id, kind=KIND, local_date=day, status="sending", attempts=1))
+                db.add(NotificationLog(user_id=user.id, kind=kind, local_date=day, status="sending", attempts=1))
             return True
         except IntegrityError:
             return False
@@ -96,7 +96,7 @@ def run_once(db: Session, sender: Sender, catalog: Catalog, now: datetime | None
             else:
                 out.sent += 1
             continue
-        if not _claim(db, user, day):
+        if not claim(db, user, day):
             out.skipped += 1
             continue
         db.commit()  # the claim is durable before anything is sent

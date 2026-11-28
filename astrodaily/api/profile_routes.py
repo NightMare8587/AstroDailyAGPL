@@ -239,6 +239,7 @@ class DeviceExport(BaseModel):
 class NotificationExport(BaseModel):
     daily_enabled: bool
     daily_time: str
+    transit_enabled: bool = False
     devices: list[DeviceExport]
 
 
@@ -325,5 +326,6 @@ def _notifications_export(user: User) -> NotificationExport | None:
     return NotificationExport(
         daily_enabled=bool(p and p.daily_enabled),
         daily_time=p.daily_time.strftime("%H:%M") if p else "07:30",
+        transit_enabled=bool(p and p.transit_enabled),
         devices=[DeviceExport(platform=d.platform, created_at=d.created_at, last_seen_at=d.last_seen_at,
                               active=d.disabled_at is None) for d in user.devices])

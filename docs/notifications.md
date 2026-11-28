@@ -1,11 +1,11 @@
-# Notifications (status: backend built 2026-11-27, nothing sent yet)
+# Notifications (status: backend built 2026-11-27; planet change alerts added 2026-11-28; nothing sent yet)
 
-One message kind for now: **the daily card**, sent at a local time the user picks (default 07:30), off until
+Two message kinds: **the daily card** and **planet change alerts** (below). The daily card is sent at a local time the user picks (default 07:30), off until
 they opt in. It shows the first suggestion in the user's language and the best time window.
 
 ## API (all under `/v1/me`, login required; writing needs consent)
 - `GET /notifications`: daily on/off, time, language, devices (no tokens), `ready_to_send`.
-- `PUT /notifications` `{daily_enabled?, daily_time?}`: opt in or out, choose the time (local, `HH:MM`).
+- `PUT /notifications` `{daily_enabled?, daily_time?, transit_enabled?}`: opt in or out, choose the time (local, `HH:MM`). The two switches are independent; both are off until the user turns them on.
 - `POST /devices` `{token, platform: android|ios|web}`: register the FCM token. Same token again refreshes it;
   a token that was on another account moves here (a token belongs to the phone). Max 10 per account.
 - `DELETE /devices/{id}`: remove one. Someone else's device returns 404.
@@ -22,6 +22,14 @@ and records `sent` or `failed`. Failed sends retry on the next runs, 3 attempts 
 is dead is disabled. Four concurrent runs against Postgres sent exactly one message.
 
 `--dry-run` works out who would be messaged and writes and sends nothing.
+
+## Planet change alerts (`notify/transit.py`)
+Sent at 09:00 local time on the day of the event, once per event (`notification_log.kind` is `tr:<planet>:<in|rx|dr>`),
+by the same `send_notifications` run. Events: Mars, Mercury, Jupiter, Venus, Saturn and Rahu (Ketu moves with it)
+changing sign, and Mars, Mercury, Jupiter, Venus and Saturn turning retrograde or direct. Sun and Moon are left out
+(a sign change every month or every two days is noise). The text names the planet, the sign and the house counted
+from the person's Moon sign; it gives no reading. Needs a birth profile (a Moon sign) and an active device.
+Draft: which planets to include, and the 09:00 time, are choices for the product owner.
 
 ## Privacy
 Lock screens are public: the message holds one suggestion line and a time window, no name, no birth details. The

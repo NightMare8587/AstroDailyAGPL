@@ -37,14 +37,16 @@ class DeviceOut(BaseModel):
 class PrefsIn(BaseModel):
     daily_enabled: bool | None = None
     daily_time: time | None = Field(default=None, description="Local time at your city, HH:MM")
+    transit_enabled: bool | None = Field(default=None, description="Alerts when a planet changes sign or turns retrograde")
 
 
 class PrefsOut(BaseModel):
     daily_enabled: bool
     daily_time: time
+    transit_enabled: bool
     language: str
     devices: list[DeviceOut]
-    # Daily messages need a birth profile (the card is personal) and at least one active device.
+    # Messages need a birth profile (the card is personal) and at least one active device.
     ready_to_send: bool
 
 
@@ -57,9 +59,10 @@ def _prefs_out(user: User) -> PrefsOut:
     p = user.notification_prefs
     enabled = p.daily_enabled if p else False
     return PrefsOut(
-        daily_enabled=enabled, daily_time=p.daily_time if p else time(7, 30), language=user.language,
+        daily_enabled=enabled, daily_time=p.daily_time if p else time(7, 30),
+        transit_enabled=bool(p and p.transit_enabled), language=user.language,
         devices=[_device_out(d) for d in user.devices],
-        ready_to_send=bool(enabled and user.profiles and any(d.disabled_at is None for d in user.devices)),
+        ready_to_send=bool((enabled or (p and p.transit_enabled)) and user.profiles and any(d.disabled_at is None for d in user.devices)),
     )
 
 
@@ -78,6 +81,8 @@ def set_notifications(body: PrefsIn, user: User = Depends(require_consent),
         user.notification_prefs = p
     if body.daily_enabled is not None:
         p.daily_enabled = body.daily_enabled
+    if body.transit_enabled is not None:
+        p.transit_enabled = body.transit_enabled
     if body.daily_time is not None:
         p.daily_time = body.daily_time.replace(second=0, microsecond=0, tzinfo=None)
     db.commit()

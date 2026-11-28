@@ -287,6 +287,9 @@ def test_month_has_one_entry_per_day_with_score_tithi_and_special_days(client):
     assert len(full) == 1 and full[0]["tithi"] == 15 and full[0]["special"] == "special_purnima"
     assert len(new) <= 1 and all(d["tithi"] == 30 for d in new)
     assert any(d["special"] == "special_ekadashi" for d in body["days"])
+    by_day = {d["date"]: d["festivals"] for d in body["days"]}
+    assert [f["en"] for f in by_day["2026-11-08"]] == ["Diwali (Lakshmi Puja)"] and by_day["2026-11-08"][0]["hi"]
+    assert by_day["2026-11-02"] == []
     # a day's score matches that day's own card
     d = body["days"][9]
     card = client.get("/v1/me/horoscope", headers=h, params={"date": d["date"]}).json()

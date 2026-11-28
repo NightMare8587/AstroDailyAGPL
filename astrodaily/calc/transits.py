@@ -41,6 +41,13 @@ class Ingress:
     to_sign: int      # 1..12
 
 
+@dataclass(frozen=True)
+class Station:
+    key: str
+    when: datetime       # UTC tz-aware
+    retrograde: bool     # True: the planet starts moving backwards; False: it turns direct again
+
+
 def _validate_sign(sign: int, label: str = "sign") -> None:
     if not 1 <= sign <= 12:
         raise ValueError(f"{label} must be in 1..12, got {sign}")
@@ -80,6 +87,11 @@ def _graha_sign(key: str, jd_ut: float) -> int:
     return zodiac.sign_of(lon)
 
 
+def sign_at(key: str, when: datetime) -> int:
+    """The sidereal sign (1..12) that ``key`` is in at ``when`` (tz-aware)."""
+    return _graha_sign(key, ephem.datetime_to_jd(when.astimezone(timezone.utc)))
+
+
 def next_ingress(key: str, after: datetime, within_days: float = 30.0) -> Ingress | None:
     """First sign change for ``key`` after ``after`` (tz-aware) within ``within_days``, or None.
 
@@ -116,6 +128,35 @@ def next_ingress(key: str, after: datetime, within_days: float = 30.0) -> Ingres
             if when <= after.astimezone(timezone.utc):
                 when = after.astimezone(timezone.utc) + timedelta(seconds=1)
             return Ingress(key=key, when=when, from_sign=start_sign, to_sign=_graha_sign(key, b_hi))
+        lo = hi
+    return None
+
+
+STATION_PLANETS = ("Mars", "Mercury", "Jupiter", "Venus", "Saturn")  # the nodes are always retrograde; Sun and Moon never
+
+
+def next_station(key: str, after: datetime, within_days: float = 30.0) -> Station | None:
+    """First time ``key`` stops and reverses its apparent motion after ``after`` within ``within_days``, or None."""
+    if after.tzinfo is None:
+        raise ValueError("after must be timezone-aware")
+    if key not in STATION_PLANETS:
+        raise ValueError(f"{key!r} has no stations")
+    body = _BODY_BY_KEY[key]
+    jd_start = ephem.datetime_to_jd(after.astimezone(timezone.utc))
+    jd_end = jd_start + within_days
+    lo = jd_start
+    was_retro = ephem.body_position(lo, body)[1] < 0
+    while lo < jd_end:
+        hi = min(lo + 0.25, jd_end)
+        if (ephem.body_position(hi, body)[1] < 0) != was_retro:
+            b_lo, b_hi = lo, hi
+            for _ in range(24):
+                mid = (b_lo + b_hi) / 2.0
+                if (ephem.body_position(mid, body)[1] < 0) == was_retro:
+                    b_lo = mid
+                else:
+                    b_hi = mid
+            return Station(key=key, when=ephem.jd_to_datetime(b_hi, timezone.utc), retrograde=not was_retro)
         lo = hi
     return None
 

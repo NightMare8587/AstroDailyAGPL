@@ -4,6 +4,7 @@ from datetime import date, datetime, time, timezone
 from sqlalchemy import (
     CheckConstraint, Text, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, SmallInteger, String, Time, UniqueConstraint, Uuid,
 )
+from sqlalchemy import false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -226,6 +227,7 @@ class NotificationPrefs(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     daily_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     daily_time: Mapped[time] = mapped_column(Time, default=time(7, 30))  # local time at the user's city
+    transit_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     user: Mapped[User] = relationship(back_populates="notification_prefs")
