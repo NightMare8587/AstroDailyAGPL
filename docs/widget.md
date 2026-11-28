@@ -16,3 +16,9 @@ raced the app could sign the person out everywhere. It uses its own narrow token
   deletes its copy and clears the widget when the person signs out.
 - It reads personal derived data (Moon sign, score, paragraph) and no birth details. Treat the token like a password
   for the widget card only.
+
+## The planet widget
+
+`GET /v1/widget/planets?lang=` (widget token) returns the same five planet cards as `GET /v1/me/horoscope/planets`, for
+today, so the "Planet card" widget can refresh in the background. It builds and saves them the first time, like the app.
+Without a birth time it answers 409.

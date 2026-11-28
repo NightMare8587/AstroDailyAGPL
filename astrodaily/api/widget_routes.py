@@ -17,6 +17,7 @@ from ..models import User, primary_profile
 from ..ratelimit import limit
 from .daily_text_routes import get_daily_llm_client
 from .horoscope_routes import Named, WidgetOut, widget_for
+from .planet_card_routes import PlanetCardsOut, cards_for
 from .profile_routes import require_consent
 
 log = logging.getLogger("astrodaily.widget")
@@ -64,3 +65,13 @@ def widget_card(lang: Lang = "en", user: User = Depends(get_widget_user), db: Se
             log.exception("widget paragraph failed")
     sign = card.subject.rashi_name
     return WidgetCardOut(**out.model_dump(), sign=Named(en=sign.en, hi=sign.hi) if sign else None, paragraph=paragraph)
+
+
+@card_router.get("/planets", response_model=PlanetCardsOut)
+def widget_planets(lang: Lang = "en", user: User = Depends(get_widget_user), db: Session = Depends(get_db),
+                   client: LlmClient | None = Depends(get_daily_llm_client)) -> PlanetCardsOut:
+    """Today's five planet cards for the planet widget. Consent is checked here too."""
+    from fastapi import HTTPException
+    if user.consented_at is None:
+        raise HTTPException(status_code=403, detail="Consent is required")
+    return cards_for(user, db, client, None, lang)

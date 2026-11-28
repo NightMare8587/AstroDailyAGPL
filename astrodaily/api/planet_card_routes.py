@@ -59,10 +59,8 @@ class PlanetCardsOut(BaseModel):
     disclaimer: dict[str, str]
 
 
-@router.get("/planets", response_model=PlanetCardsOut)
-def planet_cards_for_day(date: date_type | None = None, lang: Lang = "en", user: User = Depends(require_consent),
-                         db: Session = Depends(get_db), client: LlmClient | None = Depends(get_daily_llm_client)
-                         ) -> PlanetCardsOut:
+def cards_for(user: User, db: Session, client: LlmClient | None, date: date_type | None, lang: str) -> PlanetCardsOut:
+    """The day's cards for the user's own profile. Shared by the app and the widget."""
     profile = primary_profile(user)
     if profile is None:
         raise HTTPException(status_code=404, detail="No birth profile yet. Create one with POST /v1/profiles.")
@@ -77,3 +75,10 @@ def planet_cards_for_day(date: date_type | None = None, lang: Lang = "en", user:
     except LlmError:
         raise HTTPException(status_code=503, detail="The cards are unavailable right now. Please try again shortly.")
     return PlanetCardsOut(date=day, lang=lang, cards=[PlanetCardOut(**c) for c in cards], disclaimer=dict(DISCLAIMER))
+
+
+@router.get("/planets", response_model=PlanetCardsOut)
+def planet_cards_for_day(date: date_type | None = None, lang: Lang = "en", user: User = Depends(require_consent),
+                         db: Session = Depends(get_db), client: LlmClient | None = Depends(get_daily_llm_client)
+                         ) -> PlanetCardsOut:
+    return cards_for(user, db, client, date, lang)

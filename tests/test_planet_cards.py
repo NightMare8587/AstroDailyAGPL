@@ -188,3 +188,52 @@ def test_parse_texts_rejects_the_wrong_shapes():
     assert planet_cards.parse_texts(json.dumps({**GOOD, "health": "text"})) is None
     assert planet_cards.parse_texts(json.dumps({**GOOD, "health": {"headline": " ", "message": "m"}})) is None
     assert planet_cards.parse_texts(reply()) == GOOD
+
+
+# ---- the planet widget ----
+
+def wtoken(api, h):
+    r = api.post("/v1/me/widget-token", headers=h)
+    assert r.status_code == 200, r.text
+    return r.json()["token"]
+
+
+def wplanets(api, token, **q):
+    return api.get("/v1/widget/planets", headers={"Authorization": f"Bearer {token}"}, params=q)
+
+
+def test_the_widget_token_reads_the_same_five_cards_as_the_app(ready):
+    api, h, _ = ready
+    llm = use_llm(FakeLlm(reply()))
+    from_app = get(api, h).json()
+    r = wplanets(api, wtoken(api, h))
+    assert r.status_code == 200, r.text
+    assert r.json() == from_app
+    assert len(llm.calls) == 1 and rows(api) == 1  # the widget did not write them again
+
+
+def test_the_widget_endpoint_needs_a_widget_token_not_a_session_and_consent(ready):
+    api, h, _ = ready
+    use_llm(FakeLlm(reply()))
+    assert api.get("/v1/widget/planets").status_code == 401
+    session = h["Authorization"].split()[1]
+    assert wplanets(api, session).status_code == 401  # a session token is not a widget token
+    token = wtoken(api, h)
+    assert api.get("/v1/me/horoscope/planets", headers={"Authorization": f"Bearer {token}"}).status_code == 401  # nor the other way
+    assert wplanets(api, token, lang="hi").status_code == 200
+
+
+def test_the_widget_gets_409_without_a_birth_time(client):
+    with client.session_factory() as db:
+        db.add(Place(id=1273294, name="Delhi", name_hi="दिल्ली", state="Delhi", district="Central Delhi",
+                     country_code="IN", latitude=28.65195, longitude=77.23149, population=11034555,
+                     timezone="Asia/Kolkata"))
+        db.commit()
+    h = login(client)
+    assert client.post("/v1/profiles", headers=h, json={"label": "Me", "birth_date": "1990-05-15", "moon_sign": 9,
+                                                        "place_id": 1273294}).status_code == 201
+    use_llm(FakeLlm(reply()))
+    try:
+        assert wplanets(client, wtoken(client, h)).status_code == 409
+    finally:
+        app.dependency_overrides.pop(get_daily_llm_client, None)
