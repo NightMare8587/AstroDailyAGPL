@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from . import __version__
 from .api.auth_routes import router as auth_router
+from .api.billing_routes import router as billing_router
 from .api.chat_routes import router as chat_router
 from .api.daily_text_routes import router as daily_text_router
 from .api.chart_kind_routes import router as chart_kind_router
@@ -33,6 +34,7 @@ app.include_router(user_router)
 app.include_router(export_router)
 app.include_router(notification_router)
 app.include_router(chat_router)
+app.include_router(billing_router)
 app.include_router(places_router)
 app.include_router(kundli_router)
 app.include_router(legal_router)

@@ -11,7 +11,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..auth.deps import get_current_user, get_optional_user
+from ..billing.service import is_premium
+from ..config import get_settings
 from ..calc import festivals, zodiac
+from ..calc.panchang import compute_panchang
 from ..content import catalog as content_catalog
 from ..content.apply import localize
 from ..db import get_db, get_optional_db
@@ -104,6 +107,7 @@ class HoroscopeOut(BaseModel):
     theme: SignalOut | None
     coming_up: SignalOut | None
     windows: WindowsOut
+    windows_locked: bool = False   # the good and go-easy times are for paying users: the lists above are empty
     why: list[SignalOut]
     panchang: PanchangBriefOut
     requested_language: Lang
@@ -221,10 +225,16 @@ def _personal(p: BirthProfile, user: User, db: Session, date: date_type | None, 
     # Where is the person today? An explicit place, else their home city, else where they were born.
     loc = _explicit_location(db, place_id, lat, lon, tz) or _home_location(user) or _profile_location(p)
     day = _day(date, loc)
+    premium = is_premium(user)
+    if not premium and day > service.today_in(loc.timezone) + timedelta(days=get_settings().free_calendar_days_ahead):
+        raise HTTPException(status_code=402, detail="premium_required")
     sign, _, _ = profile_moon(p)  # the person's Moon sign, so the app can show its name
     subject = SubjectOut(type="profile", profile_id=p.id, rashi=sign,
                          rashi_name=_rashi_subject(sign).rashi_name if sign else None)
-    return _response(_profile_card(p, day, loc), loc, subject, lang, db, f"profile:{p.id}")
+    card = _response(_profile_card(p, day, loc), loc, subject, lang, db, f"profile:{p.id}")
+    if not premium and get_settings().daily_horoscope_requires_premium:
+        card.windows, card.windows_locked = WindowsOut(best=[], avoid=[]), True
+    return card
 
 
 @profile_router.get("/{profile_id}/horoscope", response_model=HoroscopeOut)
@@ -291,6 +301,7 @@ class CalendarDayOut(BaseModel):
     moon: Literal["full", "new"] | None   # full or new moon day
     special: str | None              # special_ekadashi, special_pradosh, special_sankashti, special_purnima
     festivals: list[Named]           # festivals on this day, English and Hindi names
+    locked: bool = False             # after tomorrow for a free account: no personal score (score is 0)
 
 
 class CalendarOut(BaseModel):
@@ -314,9 +325,20 @@ def my_calendar(
     check_date("month", first)
     check_date("month", last - timedelta(days=1))
     fest = _compute(festivals.festival_days, first, last - timedelta(days=1), loc.latitude, loc.longitude, loc.timezone)
+    premium = is_premium(user)
+    free_until = service.today_in(loc.timezone) + timedelta(days=get_settings().free_calendar_days_ahead)
     days = []
     for n in range((last - first).days):
         day = first + timedelta(days=n)
+        if not premium and day > free_until:
+            # Locked: no personal score, but the tithi and festivals are the same for everyone.
+            pan = _compute(compute_panchang, day, loc.latitude, loc.longitude, loc.timezone)
+            t = pan["tithi"]
+            days.append(CalendarDayOut(
+                date=day, score=0, locked=True, tithi=t.number, tithi_name=Named(en=t.en, hi=t.hi),
+                paksha=t.extra["paksha"], moon="full" if t.number == 15 else "new" if t.number == 30 else None,
+                special=None, festivals=[Named(en=f.en, hi=f.hi) for f in fest.get(day, [])]))
+            continue
         core = _compute(service.personal_card_core, p, day, loc.latitude, loc.longitude, loc.timezone)
         tithi = core["panchang"]["tithi"]
         num = tithi["number"]

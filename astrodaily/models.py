@@ -68,6 +68,7 @@ class User(Base):
     planet_cards: Mapped[list["DailyPlanetCards"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     match_summaries: Mapped[list["MatchSummary"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     chat_usage: Mapped[list["ChatUsage"]] = relationship(cascade="all, delete-orphan")
+    subscriptions: Mapped[list["Subscription"]] = relationship(cascade="all, delete-orphan")
 
 
 class RefreshToken(Base):
@@ -244,6 +245,23 @@ class NotificationLog(Base):
     local_date: Mapped[date] = mapped_column(Date)
     status: Mapped[str] = mapped_column(String(12))  # sending, sent, failed, no_device
     attempts: Mapped[int] = mapped_column(SmallInteger, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class Subscription(Base):
+    """One purchase from the store. A person is a paying user while any of their rows has not expired or been revoked."""
+    __tablename__ = "subscriptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    product_id: Mapped[str] = mapped_column(String(16))
+    source: Mapped[str] = mapped_column(String(8))  # fake, google
+    purchase_token: Mapped[str] = mapped_column(String(512), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    auto_renewing: Mapped[bool] = mapped_column(Boolean, default=True)
+    trial: Mapped[bool] = mapped_column(Boolean, default=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # refunded or charged back
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

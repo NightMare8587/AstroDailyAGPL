@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from ..billing.service import chat_limit
 from ..config import get_settings
 from ..models import BirthProfile, ChatConversation, ChatMessage, ChatUsage, User
 from .context import build_context
@@ -49,7 +50,7 @@ def _prepare(db: Session, user: User, conv: ChatConversation, text: str, lang: s
     s = get_settings()
     crisis = is_crisis(text)
     # The daily cap protects cost; it must never stand between a person in distress and the helpline answer.
-    if not crisis and messages_today(db, user) >= s.chat_daily_message_limit:
+    if not crisis and messages_today(db, user) >= chat_limit(user):
         raise DailyLimitReached
     if crisis:
         return _Prep(True)

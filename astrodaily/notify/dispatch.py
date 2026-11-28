@@ -8,6 +8,8 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..billing.service import is_premium
+from ..config import get_settings
 from ..content.apply import localize
 from ..content.catalog import Catalog
 from ..horoscope import service
@@ -105,7 +107,7 @@ def run_once(db: Session, sender: Sender, catalog: Catalog, now: datetime | None
             core = service.personal_card_core(profile, day, loc.latitude, loc.longitude, loc.timezone)
             card, _ = localize(service.with_location(core, loc), catalog, user.language,
                                f"profile:{profile.id}:{day}")
-            push = daily_push(card, user.language)
+            push = daily_push(card, user.language, with_window=is_premium(user) or not get_settings().daily_horoscope_requires_premium)
             outcomes = []
             for d in devices:
                 oc = sender.send(d.token, push)

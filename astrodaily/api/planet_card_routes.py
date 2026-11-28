@@ -6,8 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ..billing.service import is_premium
 from ..chat.context import day_location
 from ..chat.llm import LlmClient, LlmError
+from ..config import get_settings
 from ..db import get_db
 from ..horoscope import love_reading, planet_cards, service
 from ..horoscope.card import DISCLAIMER
@@ -64,6 +66,8 @@ def cards_for(user: User, db: Session, client: LlmClient | None, date: date_type
     profile = primary_profile(user)
     if profile is None:
         raise HTTPException(status_code=404, detail="No birth profile yet. Create one with POST /v1/profiles.")
+    if get_settings().daily_horoscope_requires_premium and not is_premium(user):
+        raise HTTPException(status_code=402, detail="premium_required")
     today = service.today_in(day_location(user, profile).timezone)
     day = date or today
     if not today <= day <= today + timedelta(days=1):

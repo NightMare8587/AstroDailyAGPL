@@ -15,6 +15,17 @@ def _configure_ephemeris():
 
 
 @pytest.fixture(autouse=True)
+def _everything_free_by_default(monkeypatch):
+    """Most tests are not about the paywall: give every account the full app. test_billing.py turns the limits on."""
+    monkeypatch.setenv("DAILY_HOROSCOPE_REQUIRES_PREMIUM", "false")
+    monkeypatch.setenv("CHAT_FREE_DAILY_MESSAGE_LIMIT", "30")
+    monkeypatch.setenv("FREE_CALENDAR_DAYS_AHEAD", "100000")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
 def _fresh_rate_limits():
     from astrodaily import ratelimit
     from astrodaily.content import catalog

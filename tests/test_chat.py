@@ -374,6 +374,7 @@ def test_no_api_key_is_503(ready):
 def test_daily_limit_blocks_but_never_blocks_a_crisis_answer(ready, monkeypatch):
     api, h = ready
     monkeypatch.setenv("CHAT_DAILY_MESSAGE_LIMIT", "2")
+    monkeypatch.setenv("CHAT_FREE_DAILY_MESSAGE_LIMIT", "2")
     get_settings.cache_clear()
     try:
         llm = use_llm(FakeLlm())
@@ -387,6 +388,7 @@ def test_daily_limit_blocks_but_never_blocks_a_crisis_answer(ready, monkeypatch)
         assert len(llm.calls) == 2
     finally:
         monkeypatch.delenv("CHAT_DAILY_MESSAGE_LIMIT")
+        monkeypatch.setenv("CHAT_FREE_DAILY_MESSAGE_LIMIT", "30")
         get_settings.cache_clear()
 
 
@@ -520,6 +522,7 @@ def test_stream_endpoint_problems_before_the_first_word_use_plain_status_codes(r
     use_llm(FakeLlm())
     assert stream(api, h, cid, "   ").status_code == 422
     monkeypatch.setenv("CHAT_DAILY_MESSAGE_LIMIT", "1")
+    monkeypatch.setenv("CHAT_FREE_DAILY_MESSAGE_LIMIT", "1")
     get_settings.cache_clear()
     try:
         assert stream(api, h, cid).status_code == 200
@@ -602,6 +605,7 @@ def test_a_failed_summary_changes_nothing_and_the_chat_carries_on(ready, monkeyp
 
 def test_deleting_a_chat_does_not_give_the_daily_messages_back(ready, monkeypatch):
     monkeypatch.setenv("CHAT_DAILY_MESSAGE_LIMIT", "2")
+    monkeypatch.setenv("CHAT_FREE_DAILY_MESSAGE_LIMIT", "2")
     get_settings.cache_clear()
     try:
         api, h = ready

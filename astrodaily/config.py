@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     # Longest a daily message may be late (cron down, restarts) before the day is skipped, in minutes.
     notify_max_late_minutes: int = 180
 
+    # Subscriptions. "none": purchases are refused; "fake": a stand-in store for testing (never with real users).
+    billing_provider: str = "none"
+    # What a person without a subscription gets.
+    chat_free_daily_message_limit: int = 5    # user messages per rolling 24 hours; paying users get chat_daily_message_limit
+    free_calendar_days_ahead: int = 1         # days after today a free account can open (1 = today and tomorrow)
+    daily_horoscope_requires_premium: bool = True  # the written paragraph, the planet cards and the time windows
+
     # AI chat. Cost and safety limits, all adjustable without a release.
     chat_daily_message_limit: int = 30        # user messages per rolling 24 hours, per account
     chat_max_message_chars: int = 1000

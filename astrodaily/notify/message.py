@@ -14,13 +14,13 @@ def _clock(value: datetime, tz: str) -> str:
     return value.astimezone(ZoneInfo(tz)).strftime("%H:%M")
 
 
-def daily_push(card: dict[str, Any], lang: str) -> Push:
+def daily_push(card: dict[str, Any], lang: str, with_window: bool = True) -> Push:
     """card: a localized card dict (``dos`` lines carry ``text`` and ``reason``)."""
     tz = card["location"]["timezone"]
     first = card["dos"][0] if card["dos"] else None
     headline = (first.get("text") or first.get("reason")) if first else None
     parts = [headline] if headline else []
-    best = card["windows"]["best"]
+    best = card["windows"]["best"] if with_window else []  # the times are for paying users
     if best:
         parts.append(f"{BEST[lang]} {_clock(best[0]['start'], tz)}-{_clock(best[0]['end'], tz)}")
     body = " ".join(parts) or TITLE[lang]

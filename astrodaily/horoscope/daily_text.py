@@ -11,6 +11,7 @@ from ..chat.context import build_context
 from ..chat.llm import LlmClient, LlmError, Turn
 from ..chat.prompt import DAILY_REQUEST, RETRY_NOTE, daily_system_prompt
 from ..chat.safety import breaks_tone_rules
+from ..billing.service import is_premium
 from ..config import get_settings
 from ..models import BirthProfile, DailyHoroscope, User
 
@@ -41,10 +42,13 @@ def get_or_build(db: Session, user: User, profile: BirthProfile, day: date, lang
                  client: LlmClient | None) -> DailyHoroscope:
     """The saved horoscope, or a new one. Raises FreeLimitReached, or LlmError when the model is unavailable
     (nothing is saved then, so the next open simply tries again)."""
+    s = get_settings()
+    # The written paragraph is a paying feature (and costs a model call): nothing for a free account, saved or not.
+    if s.daily_horoscope_requires_premium and not is_premium(user):
+        raise FreeLimitReached
     found = saved(db, profile, day, lang)
     if found is not None:
         return found
-    s = get_settings()
     # Another language for a day already written does not use up a free day.
     if s.daily_horoscope_free_limit > 0:
         has_day = db.scalar(select(func.count(DailyHoroscope.id)).where(

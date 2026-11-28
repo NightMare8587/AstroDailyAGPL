@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..auth.deps import get_current_user
+from ..billing.service import chat_limit
 from ..chat import service as chat
 from ..chat.llm import GeminiClient, LlmClient, LlmError
 from ..config import get_settings
@@ -135,7 +136,7 @@ def send_message(conv_id: uuid.UUID, body: MessageIn, user: User = Depends(requi
         raise HTTPException(status_code=429, detail="Daily message limit reached. Please come back tomorrow.")
     except LlmError:
         raise HTTPException(status_code=503, detail="The guide is unavailable right now. Please try again shortly.")
-    return ReplyOut(reply=_msg_out(reply), remaining_today=max(0, s.chat_daily_message_limit - chat.messages_today(db, user)),
+    return ReplyOut(reply=_msg_out(reply), remaining_today=max(0, chat_limit(user) - chat.messages_today(db, user)),
                     disclaimer=dict(DISCLAIMER))
 
 
@@ -172,7 +173,7 @@ def send_message_stream(conv_id: uuid.UUID, body: MessageIn, user: User = Depend
             kind, value = pending
             if kind == "done":
                 yield _sse("done", {"reply": _msg_out(value).model_dump(mode="json"),
-                                    "remaining_today": max(0, s.chat_daily_message_limit - chat.messages_today(db, user)),
+                                    "remaining_today": max(0, chat_limit(user) - chat.messages_today(db, user)),
                                     "disclaimer": dict(DISCLAIMER)})
             else:
                 yield _sse(kind, {"text": value})

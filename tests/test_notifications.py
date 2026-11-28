@@ -279,7 +279,7 @@ def test_one_broken_user_does_not_stop_the_run(db, monkeypatch):
     real = dispatch.daily_push
     n = {"i": 0}
 
-    def flaky(card, lang):
+    def flaky(card, lang, **kw):
         n["i"] += 1
         if n["i"] == 1:
             raise RuntimeError("bad card")

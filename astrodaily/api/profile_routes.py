@@ -236,6 +236,15 @@ class DeviceExport(BaseModel):
     active: bool
 
 
+class SubscriptionExport(BaseModel):
+    product_id: str
+    source: str
+    expires_at: datetime
+    auto_renewing: bool
+    trial: bool
+    created_at: datetime
+
+
 class NotificationExport(BaseModel):
     daily_enabled: bool
     daily_time: str
@@ -289,6 +298,7 @@ class ExportOut(BaseModel):
     profiles: list[ProfileOut]
     horoscope_feedback: list[FeedbackExport] = []
     notifications: NotificationExport | None = None
+    subscriptions: list[SubscriptionExport] = []
     chats: list[ChatExport] = []
     daily_horoscopes: list[DailyHoroscopeExport] = []
     love_readings: list[LoveReadingExport] = []
@@ -305,6 +315,9 @@ def export_my_data(user: User = Depends(get_current_user)) -> ExportOut:
                                                         felt_accurate=f.felt_accurate, created_at=f.created_at)
                                          for f in user.feedback],
                      notifications=_notifications_export(user),
+                     subscriptions=[SubscriptionExport(product_id=s.product_id, source=s.source, expires_at=s.expires_at,
+                                                       auto_renewing=s.auto_renewing, trial=s.trial,
+                                                       created_at=s.created_at) for s in user.subscriptions],
                      chats=[ChatExport(id=str(c.id), title=c.title, summary=c.summary, created_at=c.created_at,
                                        messages=[ChatMessageExport(role=m.role, text=m.text, created_at=m.created_at)
                                                  for m in c.messages]) for c in user.conversations],
