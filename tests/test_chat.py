@@ -249,6 +249,14 @@ def test_the_prompt_only_sends_people_to_a_professional_when_the_question_is_abo
     assert "and stop there: do not add astrological guidance about that decision" in text
 
 
+def test_the_prompt_keeps_the_astrology_tone_for_astrology_questions_only():
+    from astrodaily.chat.prompt import system_prompt
+    text = " ".join(system_prompt("en", "CTX").split())
+    assert "Only when the message is about astrology, their chart, their day, timing, or how to use them" in text
+    assert "no day score, no times, no planets or signs, and no suggestion to focus on a task or use a good time" in text
+    assert "Offer a concrete next step only when the person asks what to do" in text
+
+
 # ---------------------------------------------------------------- access rules
 
 def test_requires_login_and_consent(api):
