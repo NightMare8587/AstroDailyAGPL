@@ -157,3 +157,98 @@ def test_needs_both_birth_times_and_someone_else_and_only_your_own_profiles(read
     assert api.get(f"/v1/me/match/{nt.json()['id']}", headers=h).status_code == 409
     h2 = login(api, "bob")
     assert api.get(f"/v1/me/match/{other['id']}", headers=h2).status_code in (403, 404)
+
+
+# ---- swapping who is first, and the written summary ----
+
+from astrodaily.api.daily_text_routes import get_daily_llm_client  # noqa: E402
+from astrodaily.chat.llm import LlmError  # noqa: E402
+from test_daily_text import FakeLlm, use_llm  # noqa: E402
+
+
+def test_swap_puts_the_other_person_first_and_marks_who_is_you(ready):
+    api, h, me, other = ready
+    normal = api.get(f"/v1/me/match/{other['id']}", headers=h).json()
+    swapped = api.get(f"/v1/me/match/{other['id']}?swap=true", headers=h).json()
+    assert normal["a"]["is_you"] and not normal["b"]["is_you"]
+    assert swapped["b"]["is_you"] and not swapped["a"]["is_you"] and swapped["a"]["label"] == "Riya"
+    # it is the same match with the columns swapped, so the symmetric parts agree
+    by = lambda j: {p["key"]: p for p in j["parts"]}  # noqa: E731
+    for key in ("tara", "yoni", "graha_maitri", "bhakoot", "nadi"):
+        assert by(normal)[key]["points"] == by(swapped)[key]["points"], key
+    for key in m.KOOTAS:
+        assert by(normal)[key]["a"] == by(swapped)[key]["b"] and by(normal)[key]["b"] == by(swapped)[key]["a"], key
+
+
+def summary(api, h, pid, **q):
+    return api.get(f"/v1/me/match/{pid}/summary", headers=h, params=q)
+
+
+def test_the_summary_is_built_once_per_ordered_pair_and_language_and_then_kept(ready):
+    api, h, me, other = ready
+    llm = use_llm(FakeLlm("You fit easily in many ways.", "हिंदी सार।", "The other way round."))
+    try:
+        a = summary(api, h, other["id"])
+        assert a.status_code == 200, a.text
+        assert a.json()["text"] == "You fit easily in many ways." and a.json()["status"] == "draft" and a.json()["disclaimer"]["en"]
+        assert summary(api, h, other["id"]).json()["text"] == "You fit easily in many ways."
+        assert len(llm.calls) == 1
+        assert summary(api, h, other["id"], lang="hi").json()["text"] == "हिंदी सार।"
+        assert summary(api, h, other["id"], swap="true").json()["text"] == "The other way round."
+        assert len(llm.calls) == 3
+        assert "Hindi" in llm.calls[1][0]
+    finally:
+        app.dependency_overrides.pop(get_daily_llm_client, None)
+
+
+def test_the_model_gets_the_numbers_and_no_names_or_birth_details(ready):
+    api, h, me, other = ready
+    llm = use_llm(FakeLlm("A calm summary."))
+    try:
+        summary(api, h, other["id"])
+        system = llm.calls[0][0]
+        for needle in ("First column (you)", "Second column (the other person)", "out of 36", "Nadi:", "Moon in", "Do not mention names"):
+            assert needle in system, needle
+        for secret in ("SecretLabel", "Riya", "alice", "example.com", "1990", "1992", "10:00", "06:15", "28.65", "77.23"):
+            assert secret not in system, f"{secret!r} leaked to the model"
+        summary(api, h, other["id"], swap="true")
+        assert "First column (the other person)" in llm.calls[1][0]
+    finally:
+        app.dependency_overrides.pop(get_daily_llm_client, None)
+
+
+def test_summary_failures_save_nothing_and_birth_detail_changes_clear_it(ready):
+    from sqlalchemy import func, select
+    from astrodaily.models import MatchSummary
+    api, h, me, other = ready
+
+    def rows():
+        with api.session_factory() as db:
+            return db.scalar(select(func.count(MatchSummary.id)))
+    try:
+        use_llm(FakeLlm(error=LlmError("network")))
+        assert summary(api, h, other["id"]).status_code == 503 and rows() == 0
+        use_llm(None)
+        assert summary(api, h, other["id"]).status_code == 503
+        use_llm(FakeLlm("You will definitely marry.", "A calm, kind summary."))
+        assert summary(api, h, other["id"]).json()["text"] == "A calm, kind summary." and rows() == 1  # retried once
+        assert api.patch(f"/v1/profiles/{other['id']}", headers=h, json={"label": "Riya K"}).status_code == 200
+        assert rows() == 1  # a label change keeps it
+        assert api.patch(f"/v1/profiles/{other['id']}", headers=h, json={"birth_time": "07:30"}).status_code == 200
+        assert rows() == 0  # the other person's birth details changed
+        use_llm(FakeLlm("Fresh summary."))
+        summary(api, h, other["id"])
+        assert api.patch(f"/v1/profiles/{me['id']}", headers=h, json={"birth_time": "11:00"}).status_code == 200
+        assert rows() == 0  # and so did yours
+        summary(api, h, other["id"])
+        assert any(x["text"] == "Fresh summary." for x in api.get("/v1/me/export", headers=h).json()["match_summaries"])
+        assert api.delete(f"/v1/profiles/{other['id']}", headers=h).status_code in (200, 204)
+        assert rows() == 0  # it goes with either profile
+    finally:
+        app.dependency_overrides.pop(get_daily_llm_client, None)
+
+
+def test_summary_needs_the_same_things_as_the_match(ready):
+    api, h, me, other = ready
+    assert summary(api, h, me["id"]).status_code == 422
+    assert api.get("/v1/me/match/00000000-0000-0000-0000-000000000000/summary", headers=h).status_code == 404

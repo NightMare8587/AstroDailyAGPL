@@ -15,7 +15,7 @@ from ..auth.deps import get_current_user
 from ..config import get_settings
 from ..db import get_db
 from ..calc import moonsign
-from ..horoscope import daily_text, love_reading, planet_cards
+from ..horoscope import daily_text, love_reading, match_summary, planet_cards
 from ..models import BirthProfile, Place, User
 from ..ratelimit import limit
 from .birth import Location, check_date, place_label as _place_label, resolve_location
@@ -185,6 +185,7 @@ def update_profile(profile_id: uuid.UUID, body: ProfileUpdate, user: User = Depe
         daily_text.forget(db, profile)  # the written horoscopes were made from the old details
         love_reading.forget(db, profile)
         planet_cards.forget(db, profile)
+        match_summary.forget(db, profile)
     db.commit()
     return ProfileOut.from_profile(profile)
 
@@ -274,6 +275,12 @@ class PlanetCardsExport(BaseModel):
     created_at: datetime
 
 
+class MatchSummaryExport(BaseModel):
+    lang: str
+    text: str
+    created_at: datetime
+
+
 class ExportOut(BaseModel):
     account: UserOut
     consented_at: datetime | None
@@ -284,6 +291,7 @@ class ExportOut(BaseModel):
     daily_horoscopes: list[DailyHoroscopeExport] = []
     love_readings: list[LoveReadingExport] = []
     planet_cards: list[PlanetCardsExport] = []
+    match_summaries: list[MatchSummaryExport] = []
 
 
 @export_router.get("/export", response_model=ExportOut)
@@ -303,7 +311,9 @@ def export_my_data(user: User = Depends(get_current_user)) -> ExportOut:
                      love_readings=[LoveReadingExport(lang=r.lang, text=r.text, created_at=r.created_at)
                                     for r in user.love_readings],
                      planet_cards=[PlanetCardsExport(date=c.local_date, lang=c.lang, texts=c.texts, created_at=c.created_at)
-                                   for c in user.planet_cards])
+                                   for c in user.planet_cards],
+                     match_summaries=[MatchSummaryExport(lang=m.lang, text=m.text, created_at=m.created_at)
+                                      for m in user.match_summaries])
 
 
 def _notifications_export(user: User) -> NotificationExport | None:

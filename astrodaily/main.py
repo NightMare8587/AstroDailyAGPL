@@ -4,6 +4,7 @@ from . import __version__
 from .api.auth_routes import router as auth_router
 from .api.chat_routes import router as chat_router
 from .api.daily_text_routes import router as daily_text_router
+from .api.chart_kind_routes import router as chart_kind_router
 from .api.love_routes import router as love_router
 from .api.match_routes import router as match_router
 from .api.planet_card_routes import router as planet_card_router
@@ -41,6 +42,7 @@ app.include_router(horoscope_router)
 app.include_router(feedback_router)
 app.include_router(horoscope_profile_router)
 app.include_router(daily_text_router)
+app.include_router(chart_kind_router)
 app.include_router(love_router)
 app.include_router(match_router)
 app.include_router(planet_card_router)

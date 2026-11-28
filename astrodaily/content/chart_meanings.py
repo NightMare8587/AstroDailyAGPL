@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+from ..calc.zodiac import PLANET_NAMES
 from ..config import get_settings
 
 _FILE = Path(__file__).with_name("chart_meanings.json")
@@ -64,3 +65,20 @@ def lagna_meaning(sign: int) -> Meaning | None:
     if not _allowed(status):
         return None
     return Meaning(about=d["lagna"], in_sign=d["sign_overrides"]["Lagna"][sign - 1], in_house=None, status=status)
+
+
+def dasha_meaning(main: str, sub: str | None = None) -> dict[str, str] | None:
+    """What a main period (or a sub-period inside it) is like, in English and Hindi. None when the wording is not
+    allowed yet or the planet is unknown."""
+    d = _data()
+    about = d.get("dasha", {}).get(main)
+    if about is None or not _allowed(_status("dasha", "planet_role")):
+        return None
+    if sub is None:
+        return about
+    roles = d["planet_role"]
+    if sub not in roles or main not in roles:
+        return None
+    t = d["templates"]["dasha_sub"]
+    return {lang: t[lang].format(main=PLANET_NAMES[main][i], sub=PLANET_NAMES[sub][i], main_role=roles[main][lang],
+                                 sub_role=roles[sub][lang]) for i, lang in enumerate(("en", "hi"))}

@@ -141,3 +141,35 @@ PLANET_CARDS_REQUEST = "Write the five planet cards as JSON."
 
 def planet_cards_system_prompt(lang: str, context: str) -> str:
     return PLANET_CARDS_SYSTEM.format(language=LANG_NAME.get(lang, LANG_NAME["en"]), context=context)
+
+
+MATCH_SYSTEM = """You write a short compatibility summary for two people for the AstroDaily app, based on the traditional \
+36-point match (Ashtakoota) of Vedic astrology as computed by AstroDaily.
+
+Task: write ONE paragraph of about 110 to 150 words, speaking to "you" about you and "the other person". Say what \
+fits easily (the parts with high points), gently name one or two things worth talking through (the parts with low \
+points), and end with one small, practical suggestion for the two of you. No greeting, no title, no headings, no \
+lists, no markdown, no emojis, no sign-off.
+
+Facts: use ONLY the CONTEXT. Never invent planetary positions, dates, yogas or doshas. The rules behind the context are \
+common convention and have not been verified by an expert, so speak of tendencies and suggestions, never of facts or \
+guarantees. Do not call anything "ancient" or "classical", and do not claim astrology is scientifically proven. Use \
+plain everyday words: the part names Varna, Vashya, Tara, Yoni, Graha Maitri, Gana, Bhakoot and Nadi may be used once \
+or twice with a plain explanation, but no other technical terms. Never say the two should or should not marry, never \
+give a verdict on the relationship, and never predict separation, trouble or any fixed fate. A low part means "worth \
+talking through", said kindly. Do not mention names.
+
+Tone: warm, calm and practical. Give no medical, legal or financial advice. Do not recommend gemstones, paid rituals or \
+purchases.
+
+Language: write in {language}.
+
+CONTEXT (computed by AstroDaily):
+{context}
+"""
+
+MATCH_REQUEST = "Write the compatibility summary."
+
+
+def match_system_prompt(lang: str, context: str) -> str:
+    return MATCH_SYSTEM.format(language=LANG_NAME.get(lang, LANG_NAME["en"]), context=context)

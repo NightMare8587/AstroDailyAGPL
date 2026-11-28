@@ -113,3 +113,44 @@ def test_the_chart_endpoint_carries_the_meanings(client):
     sun = next(p for p in k["planets"] if p["key"] == "Sun")
     assert sun["meaning"]["status"] == "draft" and sun["meaning"]["in_house"]["en"].startswith(f"In house {sun['house']}")
     assert k["lagna"]["meaning"]["in_house"] is None and k["lagna"]["meaning"]["about"]["en"]
+
+
+# ---- what a dasha (period) is like ----
+
+DASHA_LORDS = ["Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury", "Ketu", "Venus"]
+
+
+def test_every_main_period_has_text_in_both_languages_that_passes_the_tone_rules():
+    for lord in DASHA_LORDS:
+        m = cm.dasha_meaning(lord)
+        assert m and m["en"] and m["hi"], lord
+        assert not BANNED_EN.search(m["en"]) and not BANNED_HI.search(m["hi"]), lord
+        assert re.search(r"[ऀ-ॿ]", m["hi"]) and not re.search(r"[A-Za-z]", m["hi"]), lord
+        assert zodiac.PLANET_NAMES[lord][0] in m["en"], lord
+
+
+def test_a_sub_period_is_put_together_from_the_two_planets():
+    m = cm.dasha_meaning("Rahu", "Mars")
+    assert "Rahu" in m["en"] and "Mars" in m["en"] and "ambition" in m["en"] and "energy" in m["en"]
+    assert "राहु" in m["hi"] and "मंगल" in m["hi"] and not re.search(r"[A-Za-z]", m["hi"])
+    assert cm.dasha_meaning("Pluto") is None and cm.dasha_meaning("Rahu", "Pluto") is None
+
+
+def test_draft_dasha_text_is_hidden_unless_allowed(monkeypatch):
+    monkeypatch.setenv("CHART_MEANINGS_ALLOW_DRAFT", "false")
+    get_settings.cache_clear()
+    try:
+        assert cm.dasha_meaning("Sun") is None and cm.dasha_meaning("Sun", "Moon") is None
+    finally:
+        monkeypatch.undo()
+        get_settings.cache_clear()
+
+
+def test_the_chart_endpoint_carries_what_each_period_is_like(client):
+    k = client.post("/v1/kundli", json={"date": "1996-08-14", "time": "07:45", "lat": 18.52, "lon": 73.86,
+                                        "tz": "Asia/Kolkata"}).json()
+    for m in k["dasha"]["mahadashas"]:
+        assert m["meaning"]["en"] and m["meaning"]["hi"]
+        assert len(m["antardashas"]) == 9 and all(a["meaning"]["en"] and a["meaning"]["hi"] for a in m["antardashas"])
+        assert m["lord"]["en"] in m["meaning"]["en"]
+        assert all(m["lord"]["en"] in a["meaning"]["en"] and a["lord"]["en"] in a["meaning"]["en"] for a in m["antardashas"])

@@ -6,7 +6,8 @@
   "house_area": "draft",
   "sign_overrides": "draft",
   "lagna": "draft",
-  "planet_role": "draft"
+  "planet_role": "draft",
+  "dasha": "draft"
  },
  "planets": {
   "Sun": {
@@ -58,6 +59,10 @@
   "in_house": {
    "en": "In house {n}, the themes of {role} work through {area}.",
    "hi": "{ordinal} भाव में {role} के विषय {area} के माध्यम से काम करते हैं।"
+  },
+  "dasha_sub": {
+   "en": "In this stretch the themes of {main} ({main_role}) are coloured by {sub} ({sub_role}).",
+   "hi": "इस अवधि में {main} ({main_role}) के विषयों पर {sub} ({sub_role}) का रंग चढ़ता है।"
   }
  },
  "sign_style": [
@@ -360,6 +365,44 @@
   "Ketu": {
    "en": "detachment, insight and letting go",
    "hi": "वैराग्य, अंतर्दृष्टि और छोड़ने"
+  }
+ },
+ "dasha": {
+  "Sun": {
+   "en": "The Sun period puts self-expression, confidence and responsibility in front. It is a time to stand in your own authority, build your standing and look at your relationship with fathers and leaders.",
+   "hi": "सूर्य की दशा में आत्म-अभिव्यक्ति, आत्मविश्वास और ज़िम्मेदारी आगे आती है। यह अपने अधिकार में खड़े होने, अपनी साख बनाने और पिता व मार्गदर्शकों से अपने संबंध को देखने का समय है।"
+  },
+  "Moon": {
+   "en": "The Moon period turns attention to feelings, home, family and rest. Moods may feel more tidal, so routine, nourishing company and care of the mind help most.",
+   "hi": "चंद्र की दशा में ध्यान भावनाओं, घर, परिवार और विश्राम पर जाता है। मन का उतार-चढ़ाव ज़्यादा महसूस हो सकता है, इसलिए दिनचर्या, अपनों का साथ और मन की देखभाल सबसे ज़्यादा काम आती है।"
+  },
+  "Mars": {
+   "en": "The Mars period brings energy, drive and the urge to act. It favours courage, fitness, building and healthy competition; patience and well-aimed effort keep the heat useful.",
+   "hi": "मंगल की दशा ऊर्जा, जोश और कुछ कर गुज़रने की चाह लाती है। यह साहस, सेहत, निर्माण और स्वस्थ प्रतिस्पर्धा के लिए अच्छी है; धैर्य और सही दिशा का प्रयास इस ताप को काम का बनाए रखता है।"
+  },
+  "Rahu": {
+   "en": "The Rahu period is a time of ambition and the new. Interests may stretch beyond the familiar, towards new places, technology or ideas, so grounding habits help you enjoy the pull without chasing every spark.",
+   "hi": "राहु की दशा महत्वाकांक्षा और नएपन का समय है। रुचियाँ जाने-पहचाने से आगे, नई जगहों, तकनीक या विचारों की ओर बढ़ सकती हैं; टिकाऊ आदतें इस खिंचाव का आनंद लेने में मदद करती हैं।"
+  },
+  "Jupiter": {
+   "en": "The Jupiter period favours learning, guidance, growth and goodwill. It is a good stretch for study, teaching, faith, family growth and widening your circle.",
+   "hi": "गुरु की दशा सीखने, मार्गदर्शन, विकास और शुभेच्छा के लिए अनुकूल है। यह पढ़ाई, सिखाने, आस्था, परिवार के विस्तार और अपना दायरा बढ़ाने का अच्छा समय है।"
+  },
+  "Saturn": {
+   "en": "The Saturn period rewards patience, discipline and steady work. Things may move slowly, but effort put in now tends to build lasting foundations and maturity.",
+   "hi": "शनि की दशा धैर्य, अनुशासन और लगातार मेहनत का फल देती है। चीज़ें धीमी चल सकती हैं, पर अभी लगाया गया प्रयास टिकाऊ नींव और परिपक्वता बनाता है।"
+  },
+  "Mercury": {
+   "en": "The Mercury period lights up thinking, learning, trade and communication. It suits study, writing, skills, business and staying curious.",
+   "hi": "बुध की दशा सोच, सीखने, व्यापार और संवाद को रोशन करती है। यह पढ़ाई, लेखन, हुनर, कारोबार और जिज्ञासु बने रहने के लिए ठीक है।"
+  },
+  "Ketu": {
+   "en": "The Ketu period turns inward: detachment, reflection and letting go of what no longer fits. It can bring quiet, spiritual interest and a wish to simplify.",
+   "hi": "केतु की दशा भीतर की ओर मोड़ती है: विरक्ति, चिंतन और जो अब नहीं जँचता उसे छोड़ना। इसमें शांति, आध्यात्मिक रुचि और जीवन को सरल करने की चाह आ सकती है।"
+  },
+  "Venus": {
+   "en": "The Venus period highlights love, beauty, comfort and the arts. Relationships, creativity and the pleasures of life come forward; moderation keeps them sweet.",
+   "hi": "शुक्र की दशा प्रेम, सौंदर्य, सुख-सुविधा और कलाओं को उभारती है। रिश्ते, रचनात्मकता और जीवन के सुख आगे आते हैं; संयम इन्हें मधुर बनाए रखता है।"
   }
  }
 }

@@ -65,6 +65,7 @@ class User(Base):
     )
     love_readings: Mapped[list["LoveReading"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     planet_cards: Mapped[list["DailyPlanetCards"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    match_summaries: Mapped[list["MatchSummary"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class RefreshToken(Base):
@@ -348,6 +349,29 @@ class DailyPlanetCards(Base):
 
     user: Mapped[User] = relationship(back_populates="planet_cards")
     profile: Mapped[BirthProfile] = relationship(back_populates="planet_cards")
+
+
+class MatchSummary(Base):
+    """The written summary of a compatibility match between two of one user's profiles, in one language. The order
+    matters (the first profile is the first column of the match tables). Built the first time it is asked for, then kept.
+    Personal data: removed with the account, with either profile, or when either one's birth details change, and
+    included in the export."""
+    __tablename__ = "match_summaries"
+    __table_args__ = (UniqueConstraint("first_profile_id", "second_profile_id", "lang", name="uq_match_summary_pair_lang"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    first_profile_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("birth_profiles.id", ondelete="CASCADE"), index=True)
+    second_profile_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("birth_profiles.id", ondelete="CASCADE"), index=True)
+    lang: Mapped[str] = mapped_column(String(2))
+    text: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(12), default="draft")
+    model: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tokens_in: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_out: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="match_summaries")
 
 
 def primary_profile(user: "User") -> "BirthProfile | None":

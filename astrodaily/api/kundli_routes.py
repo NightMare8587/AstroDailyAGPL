@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ..calc import dasha, names, zodiac
-from ..content import chart_meanings
+from ..calc import dasha, names, yogas, zodiac
+from ..content import chart_meanings, yoga_text
 from ..calc.kundli import compute_chart, names_pair, resolve_birth_moment
 from ..db import get_optional_db
 from ..ratelimit import limit
@@ -57,6 +57,18 @@ def _meaning(m: chart_meanings.Meaning | None) -> MeaningOut | None:
                       in_house=Named(**m.in_house) if m.in_house else None, status=m.status)
 
 
+class StrengthOut(BaseModel):
+    """A simple guide to how strongly a planet sits (sign and house), not a full strength calculation."""
+    score: int
+    level: str  # strong | steady | tender
+    name: Named
+
+
+class AspectOut(BaseModel):
+    houses: list[int]       # the houses it looks at
+    planets: list[str]      # the planets standing in them
+
+
 class PlanetOut(BaseModel):
     key: str
     name: Named
@@ -71,6 +83,8 @@ class PlanetOut(BaseModel):
     navamsa_sign: SignOut
     saptamsa_sign: SignOut
     dashamsa_sign: SignOut
+    strength: StrengthOut
+    aspects: AspectOut
     meaning: MeaningOut | None = None
 
 
@@ -86,6 +100,15 @@ class LagnaOut(BaseModel):
     meaning: MeaningOut | None = None
 
 
+class YogaOut(BaseModel):
+    key: str
+    kind: str  # yoga | dosha | phase
+    name: Named
+    text: Named
+    planets: list[str]
+    status: str  # draft until reviewed
+
+
 class HouseOut(BaseModel):
     house: int
     sign: SignOut
@@ -97,6 +120,7 @@ class PeriodOut(BaseModel):
     lord: Named
     start: datetime
     end: datetime
+    meaning: Named | None = None  # what the period is like (draft text from the content library)
 
 
 class MahadashaOut(PeriodOut):
@@ -143,6 +167,7 @@ class KundliOut(BaseModel):
     lagna: LagnaOut
     planets: list[PlanetOut]
     houses: list[HouseOut]
+    yogas: list[YogaOut]
     dasha: DashaOut
 
 
@@ -158,8 +183,10 @@ def _lord(key: str) -> Named:
     return Named(**names_pair(zodiac.PLANET_NAMES[key]))
 
 
-def _period(p: dict) -> dict:
-    return {**p, "lord": _lord(p["lord"])}
+def _period(p: dict, main: str | None = None) -> dict:
+    """A period with its lord named and, for a main period (or a sub-period when [main] is given), what it is like."""
+    m = chart_meanings.dasha_meaning(main or p["lord"], p["lord"] if main else None)
+    return {**p, "lord": _lord(p["lord"]), "meaning": Named(**m) if m else None}
 
 
 def build_kundli(*, birth_date: date_type, birth_time: time_type, location: Location,
@@ -173,6 +200,19 @@ def build_kundli(*, birth_date: date_type, birth_time: time_type, location: Loca
         chart = compute_chart(birth, location.latitude, location.longitude, node, as_of)
     except (ValueError, OverflowError, swe.Error) as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+
+    sun_lon = next(p["longitude"] for p in chart["planets"] if p["key"] == "Sun")
+    by_house: dict[int, list[str]] = {}
+    for p in chart["planets"]:
+        by_house.setdefault(p["house"], []).append(p["key"])
+    for p in chart["planets"]:
+        s = yogas.strength(p, sun_lon)
+        p["_strength"] = StrengthOut(score=s["score"], level=s["level"], name=Named(**names_pair(yoga_text.LEVELS[s["level"]])))
+        p["_aspects"] = AspectOut(**yogas.aspects(p, by_house))
+    found = [YogaOut(key=y["key"], kind=y["kind"], name=Named(**names_pair(yoga_text.TEXT[y["key"]]["name"])),
+                     text=Named(en=yoga_text.TEXT[y["key"]]["en"], hi=yoga_text.TEXT[y["key"]]["hi"]),
+                     planets=y["planets"], status=yoga_text.STATUS)
+             for y in yogas.detect(chart, chart["dasha"]["as_of"])]
 
     place = location.place
     tz_label = location.timezone if utc_offset_minutes is None else f"UTC{birth.utc_offset_minutes:+d}min"
@@ -194,19 +234,20 @@ def build_kundli(*, birth_date: date_type, birth_time: time_type, location: Loca
             key=p["key"], name=Named(**p["name"]), longitude=p["longitude"], sign=_sign(p["sign"]),
             degree_in_sign=p["degree_in_sign"], nakshatra=_nak(p["nakshatra"]), pada=p["pada"],
             house=p["house"], retrograde=p["retrograde"], dignity=p["dignity"],
-            navamsa_sign=_sign(p["navamsa_sign"]),
+            navamsa_sign=_sign(p["navamsa_sign"]), strength=p["_strength"], aspects=p["_aspects"],
             saptamsa_sign=_sign(p["saptamsa_sign"]), dashamsa_sign=_sign(p["dashamsa_sign"]),
             meaning=_meaning(chart_meanings.planet_meaning(p["key"], p["sign"], names_pair(zodiac.SIGNS[p["sign"] - 1]),
                                                            p["house"]))) for p in chart["planets"]],
         houses=[HouseOut(house=h["house"], sign=_sign(h["sign"]), lord=_lord(h["lord"]), planets=h["planets"])
                 for h in chart["houses"]],
+        yogas=found,
         dasha=DashaOut(
             system=d["system"], year_length_days=d["year_length_days"],
             balance_at_birth=BalanceOut(**{**d["balance_at_birth"], "lord": _lord(d["balance_at_birth"]["lord"])}),
-            mahadashas=[MahadashaOut(**{**_period(m), "antardashas": [_period(a) for a in m["antardashas"]]})
+            mahadashas=[MahadashaOut(**{**_period(m), "antardashas": [_period(a, m["lord"]) for a in m["antardashas"]]})
                         for m in d["mahadashas"]],
             as_of=d["as_of"],
-            current=CurrentDashaOut(**{k: _period(v) for k, v in d["current"].items()}) if d["current"] else None),
+            current=CurrentDashaOut(**{k: {**v, "lord": _lord(v["lord"])} for k, v in d["current"].items()}) if d["current"] else None),
     )
 
 
