@@ -63,7 +63,10 @@ class GeminiClient:
             raise LlmError(f"status {r.status_code}")
         whole, usage = [], {}
         try:
-            for line in r.iter_lines(decode_unicode=True):
+            # Bytes, decoded here as UTF-8: the server sends no charset, so letting requests decode would garble
+            # Hindi and could split a line in the middle of a character.
+            for raw in r.iter_lines():
+                line = raw.decode("utf-8") if isinstance(raw, bytes) else raw
                 if not line or not line.startswith("data:"):
                     continue
                 data = json.loads(line[5:].strip())

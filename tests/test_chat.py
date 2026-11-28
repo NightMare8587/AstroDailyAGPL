@@ -45,9 +45,10 @@ class FakeResp:
         return self._body
 
     def iter_lines(self, decode_unicode=False):
+        # Like the real thing: bytes, with the text as UTF-8 (not escaped), so Hindi really is multi-byte
         for chunk in self._body:
-            yield "data: " + json.dumps(chunk)
-            yield ""
+            yield ("data: " + json.dumps(chunk, ensure_ascii=False)).encode("utf-8")
+            yield b""
 
 
 class FakeSession:
@@ -424,6 +425,13 @@ def test_gemini_stream_yields_pieces_then_the_whole_answer():
     assert out[:2] == ["Hello ", "there"] and out[2] == LlmResult("Hello there", 11, 7, "gemini-test")
     url, _, headers = s.posts[0]
     assert url.endswith(":streamGenerateContent?alt=sse") and "SECRET-KEY-123" not in url
+
+
+def test_gemini_stream_keeps_hindi_intact():
+    text = "आज का दिन शांत रहेगा, \u0085 एक एक काम करें।"  # includes a character some decoders treat as a line break
+    c, _ = gemini(FakeResp(200, [ok_body(text[:10]), ok_body(text[10:])]))
+    out = list(c.stream("SYS", [Turn("user", "hi")]))
+    assert "".join(o for o in out if isinstance(o, str)) == text and out[-1].text == text.strip()
 
 
 def test_gemini_stream_failures_become_llm_error():
