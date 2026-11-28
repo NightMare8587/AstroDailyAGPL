@@ -261,8 +261,13 @@ def my_horoscope_widget(
     date: date_type | None = None, lang: Lang = "en",
     user: User = Depends(require_consent), db: Session = Depends(get_db),
 ) -> WidgetOut:
+    return widget_for(user, db, date, lang)[0]
+
+
+def widget_for(user: User, db: Session, date: date_type | None, lang: Lang) -> tuple[WidgetOut, HoroscopeOut]:
+    """The widget summary and the full card it was made from."""
     card = _personal(_first_profile(user), user, db, date, None, None, None, None, lang)
-    return WidgetOut(
+    out = WidgetOut(
         date=card.date, score=card.score, level=card.level,
         headline=(card.dos[0].text or card.dos[0].reason) if card.dos else None,
         caution=(card.donts[0].text or card.donts[0].reason) if card.donts else None,
@@ -272,6 +277,7 @@ def my_horoscope_widget(
                           card.windows.avoid[0] if card.windows.avoid else None),
         timezone=card.location.timezone, text_language=card.text_language,
     )
+    return out, card
 
 
 # ---------------------------------------------------------------- calendar

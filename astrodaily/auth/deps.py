@@ -1,3 +1,5 @@
+from datetime import timezone
+
 import jwt
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -5,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db, get_optional_db
 from ..models import User
-from .tokens import decode_access_token
+from .tokens import decode_access_token, decode_widget_token
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -49,4 +51,26 @@ def get_optional_user(
     user = db.get(User, user_id)
     if user is None:
         request.state.bad_token = True
+    return user
+
+
+def get_widget_user(
+    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> User:
+    """The user behind a widget token. Refused when the person signed out after the token was issued."""
+    if creds is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        user_id, issued_us = decode_widget_token(creds.credentials)
+    except (jwt.PyJWTError, ValueError):
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    cut = user.widget_tokens_revoked_before
+    if cut is not None:
+        cut = cut if cut.tzinfo else cut.replace(tzinfo=timezone.utc)
+        if issued_us <= int(cut.timestamp() * 1_000_000):
+            raise HTTPException(status_code=401, detail="Token was revoked")
     return user

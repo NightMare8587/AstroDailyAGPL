@@ -42,3 +42,30 @@ def new_refresh_token() -> tuple[str, str]:
 
 def hash_refresh_token(raw: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def create_widget_token(user_id: uuid.UUID) -> tuple[str, datetime]:
+    """A long-lived token that can do exactly one thing: read the home-screen widget card. It is separate from the
+    session so a background job on the phone never touches the rotating refresh token. Returns (token, expires)."""
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    exp = now + timedelta(days=settings.widget_token_days)
+    payload = {
+        "sub": str(user_id),
+        "typ": "widget",
+        "iat": now,
+        "t": int(now.timestamp() * 1_000_000),  # issue time in microseconds: a sign-out revokes tokens issued before it
+        "exp": exp,
+    }
+    return jwt.encode(payload, settings.require_jwt_secret(), algorithm=ALGORITHM), exp
+
+
+def decode_widget_token(token: str) -> tuple[uuid.UUID, int]:
+    """(user id, issue time in microseconds), or raise jwt.PyJWTError / ValueError. Access tokens are refused."""
+    payload = jwt.decode(
+        token, get_settings().require_jwt_secret(), algorithms=[ALGORITHM],
+        options={"require": ["exp", "sub", "t"]},
+    )
+    if payload.get("typ") != "widget":
+        raise ValueError("wrong token type")
+    return uuid.UUID(payload["sub"]), int(payload["t"])

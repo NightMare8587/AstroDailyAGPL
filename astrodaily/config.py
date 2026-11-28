@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     # Session tokens issued by this backend.
     jwt_secret: str | None = None
     access_token_minutes: int = 15
+    # The home-screen widget refreshes in the background with its own narrow token (it can only read the widget card).
+    widget_token_days: int = 30
     refresh_token_days: int = 60
 
     # Content library: show draft (unreviewed) wording. Keep false in production until a reviewer approves.

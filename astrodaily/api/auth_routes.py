@@ -100,4 +100,7 @@ def logout(body: RefreshIn, db: Session = Depends(get_db)) -> None:
         RefreshToken.token_hash == hash_refresh_token(body.refresh_token)))
     if token is not None and token.revoked_at is None:
         token.revoked_at = utcnow()
+        user = db.get(User, token.user_id)
+        if user is not None:
+            user.widget_tokens_revoked_before = utcnow()  # the home-screen widget must stop too
         db.commit()

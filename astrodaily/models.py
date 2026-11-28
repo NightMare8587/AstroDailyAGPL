@@ -33,6 +33,8 @@ class User(Base):
     consented_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Widget tokens issued before this moment are refused (set on sign-out).
+    widget_tokens_revoked_before: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # The user's home city, picked once from place search. Cleared automatically if the place is removed.
     home_place_id: Mapped[int | None] = mapped_column(
