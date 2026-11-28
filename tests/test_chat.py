@@ -246,6 +246,7 @@ def test_the_prompt_only_sends_people_to_a_professional_when_the_question_is_abo
     text = " ".join(system_prompt("en", "CTX").split())
     assert "Only when the person's question is itself about a health, legal, or money decision" in text
     assert "otherwise do not mention professionals or advice at all" in text
+    assert "and stop there: do not add astrological guidance about that decision" in text
 
 
 # ---------------------------------------------------------------- access rules
