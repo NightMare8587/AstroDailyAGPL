@@ -200,11 +200,30 @@ def test_context_has_derived_facts_and_no_personal_details(ready):
                    "day score", "Suits today", "Panchang:", "2025-11-05", "Delhi"):
         assert needle in ctx, needle
     # the birth chart itself: planets with their place, yogas and the partnership facts
-    for needle in ("CHART (derived", "Sun in ", "Moon in ", "Venus in ", "(house ", "Yogas and doshas present:",
+    for needle in ("CHART (derived", "Sun in ", "Moon in ", "Venus in ", "(house ", "Mangal dosha (being manglik)", "Other yogas and doshas present:", "Checked and not present:",
                    "PARTNERSHIP:", "Navamsa (D9"):
         assert needle in ctx, needle
     for secret in ("SecretLabel", "alice", "example.com", "1990", "10:00", "28.65", "77.23", "User alice"):
         assert secret not in ctx, f"{secret!r} leaked into the model context"
+
+
+def test_context_states_the_mangal_dosha_check_and_the_2nd_house_difference(ready, monkeypatch):
+    from astrodaily.chat import context
+    api, h = ready
+    with api.session_factory() as db:
+        user = db.scalar(select(User))
+        p = user.profiles[0]
+        real = context.love_reading.chart_for(p)
+        mars = next(x for x in real["planets"] if x["key"] == "Mars")
+        mars["house"] = 2  # Mars in the 2nd house: not a dosha by BPHS 80.47, but some other texts count that house
+        for x in real["planets"]:
+            if x["key"] in ("Jupiter", "Venus"):
+                x["house"], x["sign"] = 6, 6  # keep them away from Mars
+        monkeypatch.setattr(context.love_reading, "chart_for", lambda _p: real)
+        ctx = build_context(user, p, date(2025, 11, 5))
+    line = next(l for l in ctx.splitlines() if l.startswith("Mangal dosha (being manglik)"))
+    assert "80.47" in line and "NOT present" in line and "Mars is in house 2" in line
+    assert "Jataka Parijata 14.34" in line and "Raman" in line
 
 
 def test_context_without_a_birth_time_has_no_chart_facts(api):

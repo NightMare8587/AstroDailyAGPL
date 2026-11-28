@@ -44,12 +44,21 @@ def chart_lines(p: BirthProfile) -> list[str]:
             notes.append("retrograde")
         notes.append(yoga_text.LEVELS[yogas.strength(x, sun_lon)["level"]][0].lower() + " position")
         placed.append(f"{x['key']} in {zodiac.SIGNS[x['sign'] - 1][0]} ({', '.join(notes)})")
-    found = yogas.detect(chart, chart["dasha"]["as_of"])
+    present = {y["key"]: y for y in yogas.detect(chart, chart["dasha"]["as_of"])}
+    mars = next(x for x in chart["planets"] if x["key"] == "Mars")
+    mangal = ("Mangal dosha (being manglik), by Brihat Parashara Hora Shastra 80.47 (Mars in house 1, 4, 7, 8 or 12 from the "
+              "lagna, unless Jupiter or Venus joins or aspects it): " + ("present" if "mangal_dosha" in present else "NOT present")
+              + f"; Mars is in house {mars['house']}.")
+    if mars["house"] == 2:
+        mangal += (" Some other texts (Jataka Parijata 14.34, B. V. Raman's Muhurtha) also count the 2nd house, so by those "
+                   "it would count as a milder dosha; the answer depends on which text is followed.")
+    others = {k: v["name"][0] for k, v in yoga_text.TEXT.items() if k != "mangal_dosha"}
     lines = [
         "CHART (derived; rules are common convention, not verified): " + "; ".join(placed) + ".",
-        "Yogas and doshas present: " + (", ".join(f"{yoga_text.TEXT[y['key']]['name'][0]} ({', '.join(y['planets'])})"
-                                                 if y["planets"] else yoga_text.TEXT[y["key"]]["name"][0]
-                                                 for y in found) or "none found") + ".",
+        mangal,
+        "Other yogas and doshas present: " + (", ".join(others[k] + (f" ({', '.join(present[k]['planets'])})" if present[k]["planets"] else "")
+                                                       for k in others if k in present) or "none") + ". Checked and not present: "
+        + (", ".join(n for k, n in others.items() if k not in present) or "none") + ".",
         "PARTNERSHIP: " + " ".join(love_reading.facts(chart).splitlines()),
     ]
     return lines
