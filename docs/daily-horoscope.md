@@ -15,4 +15,13 @@ profile). Allowed days: today and tomorrow in the person's day location; other d
   free; `0` (default) means no limit. Past the limit the endpoint answers 402. This is the hook for a later Pro plan.
 - **Other settings:** `DAILY_HOROSCOPE_MAX_OUTPUT_TOKENS` (900), plus the existing `GEMINI_API_KEY`, `GEMINI_MODEL`.
   Use a paid-tier key (see privacy doc).
-- **Later idea:** a cron that writes tomorrow's horoscope ahead of time for active users. Not built.
+- **Early-morning job (built):** `python -m astrodaily.tools.build_daily_horoscopes` writes today's horoscope, in
+  the person's language, for people who used the app recently, so it is ready (and so is the daily push, which
+  `send_notifications` sends later in the morning). "Recently" = a session sign-in or refresh within
+  `DAILY_HOROSCOPE_ACTIVE_DAYS` days (7). People who were away get theirs on demand when they open the app.
+  Days already written are skipped, so running it twice is safe. It calls the model `DAILY_HOROSCOPE_BUILD_WORKERS`
+  at a time (4) and stops after `DAILY_HOROSCOPE_BUILD_MAX_ERRORS` failures (20), leaving the rest for on-demand.
+  **To go live (needs you):** add a Railway cron service from the same image with start command
+  `python -m astrodaily.tools.build_daily_horoscopes` and schedule `30 22 * * *` (04:00 IST; Railway cron is UTC).
+  `--dry-run` only counts who is due.
+- **Not built:** writing tomorrow's horoscope ahead of time.

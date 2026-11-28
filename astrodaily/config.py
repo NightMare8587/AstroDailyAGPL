@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     # Written daily horoscope (Gemini, saved per profile, day and language). 0 free limit = no limit (everything free).
     daily_horoscope_free_limit: int = 0       # days of written horoscope one account gets free; later days need Pro
     daily_horoscope_max_output_tokens: int = 900
+    # The early-morning job that writes today's horoscope for people who used the app recently.
+    daily_horoscope_active_days: int = 7      # "active" = the app signed in or refreshed within this many days
+    daily_horoscope_build_workers: int = 4    # model calls in parallel
+    daily_horoscope_build_max_errors: int = 20  # stop the run after this many failures (outage or quota)
 
     # Most birth profiles one account may keep (the user's own plus family).
     max_profiles_per_user: int = 5
