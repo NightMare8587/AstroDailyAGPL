@@ -199,8 +199,22 @@ def test_context_has_derived_facts_and_no_personal_details(ready):
     for needle in ("Moon sign (rashi)", "birth star (nakshatra)", "ascendant (lagna)", "Vimshottari dasha",
                    "day score", "Suits today", "Panchang:", "2025-11-05", "Delhi"):
         assert needle in ctx, needle
+    # the birth chart itself: planets with their place, yogas and the partnership facts
+    for needle in ("CHART (derived", "Sun in ", "Moon in ", "Venus in ", "(house ", "Yogas and doshas present:",
+                   "PARTNERSHIP:", "Navamsa (D9"):
+        assert needle in ctx, needle
     for secret in ("SecretLabel", "alice", "example.com", "1990", "10:00", "28.65", "77.23", "User alice"):
         assert secret not in ctx, f"{secret!r} leaked into the model context"
+
+
+def test_context_without_a_birth_time_has_no_chart_facts(api):
+    h = login(api, "notime")
+    r = api.post("/v1/profiles", headers=h, json={"label": "X", "birth_date": "1990-05-15", "place_id": 1273294, "moon_sign": 9})
+    assert r.status_code == 201, r.text
+    with api.session_factory() as db:
+        user = db.scalar(select(User).where(User.email.like("%notime%")))
+        ctx = build_context(user, user.profiles[0], date(2025, 11, 5))
+    assert "CHART (derived" not in ctx and "PARTNERSHIP:" not in ctx and "birth time unknown" in ctx
 
 
 # ---------------------------------------------------------------- access rules

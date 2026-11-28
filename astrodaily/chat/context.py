@@ -4,9 +4,10 @@ from datetime import date, datetime, time, timezone
 from functools import lru_cache
 from zoneinfo import ZoneInfo
 
-from ..calc import names, zodiac
+from ..calc import names, yogas, zodiac
 from ..calc.kundli import compute_chart, resolve_birth_moment
-from ..horoscope import service
+from ..content import yoga_text
+from ..horoscope import love_reading, service
 from ..horoscope.signals import natal_from_chart
 from ..models import BirthProfile, User
 
@@ -27,6 +28,31 @@ def day_location(user: User, p: BirthProfile) -> service.DayLocation:
 
 def _hm(value: datetime, tz: str) -> str:
     return value.astimezone(ZoneInfo(tz)).strftime("%H:%M")
+
+
+def chart_lines(p: BirthProfile) -> list[str]:
+    """The birth chart as plain facts: where each planet sits and how strongly, the yogas and doshas that are present,
+    and the partnership facts the love reading uses. Needs the birth time. Derived facts only (no degrees or dates)."""
+    chart = love_reading.chart_for(p)
+    sun_lon = next(x["longitude"] for x in chart["planets"] if x["key"] == "Sun")
+    placed = []
+    for x in chart["planets"]:
+        notes = [f"house {x['house']}"]
+        if x["dignity"]:
+            notes.append(x["dignity"])
+        if x["retrograde"]:
+            notes.append("retrograde")
+        notes.append(yoga_text.LEVELS[yogas.strength(x, sun_lon)["level"]][0].lower() + " position")
+        placed.append(f"{x['key']} in {zodiac.SIGNS[x['sign'] - 1][0]} ({', '.join(notes)})")
+    found = yogas.detect(chart, chart["dasha"]["as_of"])
+    lines = [
+        "CHART (derived; rules are common convention, not verified): " + "; ".join(placed) + ".",
+        "Yogas and doshas present: " + (", ".join(f"{yoga_text.TEXT[y['key']]['name'][0]} ({', '.join(y['planets'])})"
+                                                 if y["planets"] else yoga_text.TEXT[y["key"]]["name"][0]
+                                                 for y in found) or "none found") + ".",
+        "PARTNERSHIP: " + " ".join(love_reading.facts(chart).splitlines()),
+    ]
+    return lines
 
 
 def build_context(user: User, p: BirthProfile, day: date | None = None) -> str:
@@ -53,6 +79,8 @@ def build_context(user: User, p: BirthProfile, day: date | None = None) -> str:
         "Suits today: " + (" | ".join(s["reason"] for s in core["dos"]) or "nothing notable") + ".",
         "Go easy on: " + (" | ".join(s["reason"] for s in core["donts"]) or "nothing notable") + ".",
     ]
+    if p.birth_time is not None:
+        lines += chart_lines(p)
     if core["theme"]:
         lines.append("Theme: " + core["theme"]["reason"])
     if core["coming_up"]:

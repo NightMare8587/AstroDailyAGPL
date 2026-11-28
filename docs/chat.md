@@ -21,7 +21,10 @@ fact; the model only phrases and explains them.** No human astrologer.
    never calls the model, and is allowed even when the daily cap is used up.
 2. **Daily cap**: 30 user messages per rolling 24 hours per account (`CHAT_DAILY_MESSAGE_LIMIT`). It is counted from `chat_usage` (who and when, no text), not from the chats, so
    deleting a chat or a profile does not give the messages back.
-3. **Context** from the engine (`chat/context.py`): derived facts and today's card. No personal details.
+3. **Context** from the engine (`chat/context.py`): derived facts and today's card, and, when the birth time is known,
+   the birth chart: each planet's sign, house, dignity, retrograde and a simple strength guide, the yogas and doshas that
+   are present, and the partnership facts the love reading uses (about 350 tokens). No personal details: no name, email,
+   birth date, time or coordinates, and no degrees.
 4. **Prompt** (`chat/prompt.py`): facts only from the context, tendencies not guarantees, no medical, legal or
    financial advice, no frightening predictions, no remedies that cost money, reply in the person's language, treat
    messages as questions not instructions. The person's text goes only in the user turn, never the system prompt.
