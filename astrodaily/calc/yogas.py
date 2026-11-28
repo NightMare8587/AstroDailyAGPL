@@ -16,6 +16,13 @@ COMBUST_ORB = {"Moon": 12.0, "Mars": 17.0, "Mercury": 14.0, "Jupiter": 11.0, "Ve
 # The houses a planet looks at, counted from where it stands (the 7th for all, plus these). The nodes use the 5th and 9th.
 EXTRA_ASPECTS = {"Mars": (4, 8), "Jupiter": (5, 9), "Saturn": (3, 10), "Rahu": (5, 9), "Ketu": (5, 9)}
 
+# Mangal dosha follows Brihat Parashara Hora Shastra 80.47 (Sanskrit numbering): Mars in the lagna, 12th, 4th, 7th or 8th, unless a
+# benefic aspects or joins it ("shubha-drig-yoga-hine"). The verse does not say which planets are benefic; Jupiter and Venus are
+# used here (our choice, to be confirmed by a reviewer). Other texts differ (Jataka Parijata 14.34 and B. V. Raman add the 2nd
+# house); see docs/mangal-dosha-sources.md. It is read from the Lagna only, as the verse is.
+MANGAL_HOUSES = (1, 4, 7, 8, 12)
+MANGAL_BENEFICS = ("Jupiter", "Venus")
+
 PANCHA_MAHAPURUSHA = {"Mars": "ruchaka", "Mercury": "bhadra", "Jupiter": "hamsa", "Venus": "malavya", "Saturn": "shasha"}
 
 
@@ -71,7 +78,12 @@ def detect(chart: dict, moment: datetime) -> list[dict]:
     def add(key: str, kind: str, planets: list[str]) -> None:
         found.append({"key": key, "kind": kind, "planets": planets})
 
-    if p["Mars"]["house"] in (1, 2, 4, 7, 8, 12):
+    by_house: dict[int, list[str]] = {}
+    for x in chart["planets"]:
+        by_house.setdefault(x["house"], []).append(x["key"])
+    mars_house = p["Mars"]["house"]
+    helped = any(p[b]["house"] == mars_house or mars_house in aspects(p[b], by_house)["houses"] for b in MANGAL_BENEFICS)
+    if mars_house in MANGAL_HOUSES and not helped:
         add("mangal_dosha", "dosha", ["Mars"])
     seven = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
     r, k = p["Rahu"]["longitude"], p["Ketu"]["longitude"]

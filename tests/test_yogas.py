@@ -69,11 +69,23 @@ def test_a_quiet_chart_has_none_of_the_yogas():
                         "malavya", "shasha"}
 
 
-def test_mangal_dosha_is_mars_in_1_2_4_7_8_or_12():
-    for h in (1, 2, 4, 7, 8, 12):
-        assert "mangal_dosha" in keys(chart(Mars=(h, h))), h
-    for h in (3, 5, 6, 9, 10, 11):
+def test_mangal_dosha_is_mars_in_1_4_7_8_or_12():
+    # Brihat Parashara Hora Shastra 80.47. The 2nd house is not in this verse (other texts add it; see docs/mangal-dosha-sources.md).
+    for h in (1, 4, 7, 8, 12):
+        near = h % 12 + 1  # Jupiter and Venus one house on from Mars, where they neither join nor look at it
+        assert "mangal_dosha" in keys(chart(Mars=(h, h), Jupiter=(near, near), Venus=(near, near))), h
+    for h in (2, 3, 5, 6, 9, 10, 11):
         assert "mangal_dosha" not in keys(chart(Mars=(h, h))), h
+
+
+def test_mangal_dosha_is_not_present_when_jupiter_or_venus_joins_or_aspects_mars():
+    assert "mangal_dosha" in keys(chart(Mars=(7, 7)))
+    assert "mangal_dosha" not in keys(chart(Mars=(7, 7), Jupiter=(7, 7)))   # Jupiter with Mars
+    assert "mangal_dosha" not in keys(chart(Mars=(7, 7), Venus=(7, 7)))     # Venus with Mars
+    assert "mangal_dosha" not in keys(chart(Mars=(7, 7), Jupiter=(3, 3)))   # Jupiter's 5th aspect from house 3 reaches house 7
+    assert "mangal_dosha" not in keys(chart(Mars=(7, 7), Venus=(1, 1)))     # Venus looks at the 7th from house 1
+    assert "mangal_dosha" in keys(chart(Mars=(7, 7), Jupiter=(4, 4)))       # house 4 does not look at house 7
+    assert "mangal_dosha" in keys(chart(Mars=(7, 7), Saturn=(7, 7), Mercury=(7, 7)))  # other planets do not count
 
 
 def test_gajakesari_is_jupiter_in_a_pillar_house_from_the_moon():

@@ -6,8 +6,8 @@ STATUS = "draft"
 TEXT = {
     "mangal_dosha": {
         "name": ("Mangal dosha", "मंगल दोष"),
-        "en": "Mars stands in a house that tradition watches closely for partnerships. It is read as strong, direct energy in close relationships, so patience, honest talk and shared goals help. How much it matters depends on the rest of the chart, and many people with it have happy partnerships.",
-        "hi": "मंगल ऐसे भाव में है जिसे परंपरा में साझेदारी के लिए ध्यान से देखा जाता है। इसे नज़दीकी रिश्तों में तेज़, सीधी ऊर्जा की तरह पढ़ा जाता है, इसलिए धैर्य, खुली बातचीत और साझा लक्ष्य मदद करते हैं। इसका असर बाकी कुंडली पर निर्भर करता है, और इसके साथ भी बहुत से लोगों के रिश्ते सुखी होते हैं।",
+        "en": "Mars stands in a house that tradition watches closely for partnerships. It is read as strong, direct energy in close relationships, so patience, honest talk and shared goals help. How much it matters depends on the rest of the chart, and many people with it have happy partnerships. Rule used: Brihat Parashara Hora Shastra 80.47; other texts differ.",
+        "hi": "मंगल ऐसे भाव में है जिसे परंपरा में साझेदारी के लिए ध्यान से देखा जाता है। इसे नज़दीकी रिश्तों में तेज़, सीधी ऊर्जा की तरह पढ़ा जाता है, इसलिए धैर्य, खुली बातचीत और साझा लक्ष्य मदद करते हैं। इसका असर बाकी कुंडली पर निर्भर करता है, और इसके साथ भी बहुत से लोगों के रिश्ते सुखी होते हैं। प्रयुक्त नियम: बृहत् पराशर होरा शास्त्र 80.47; अन्य ग्रंथों में भिन्नता है।",
     },
     "kaal_sarp": {
         "name": ("Kaal Sarp yoga", "काल सर्प योग"),

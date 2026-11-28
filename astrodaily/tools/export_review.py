@@ -53,7 +53,8 @@ def build() -> str:
     L += ["## What each main period (dasha) is like", "", "Source: `dasha`; a sub-period reads: " + d["templates"]["dasha_sub"]["en"], ""]
     L += table([(k, v["en"], v["hi"]) for k, v in d["dasha"].items()])
     L += ["## Yogas, doshas and Sade Sati", "", "Source: `astrodaily/content/yoga_text.py`. Rules in `astrodaily/calc/yogas.py`: Mangal dosha = "
-          "Mars in house 1, 2, 4, 7, 8 or 12 from the Lagna; Kaal Sarp = all seven planets on one side of Rahu and Ketu; "
+          "Mars in house 1, 4, 7, 8 or 12 from the Lagna unless Jupiter or Venus aspects or joins it (Brihat Parashara Hora "
+          "Shastra 80.47; sources and the other traditions are in `docs/mangal-dosha-sources.md`); Kaal Sarp = all seven planets on one side of Rahu and Ketu; "
           "Gajakesari = Jupiter in house 1, 4, 7 or 10 from the Moon; Budhaditya = Sun and Mercury in one sign; "
           "Chandra-Mangal = Moon and Mars in one sign; the five Mahapurusha yogas = Mars, Mercury, Jupiter, Venus or "
           "Saturn in its own or high sign in house 1, 4, 7 or 10; Sade Sati = Saturn now in the sign before, on, or after "
